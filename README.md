@@ -20,6 +20,98 @@ flowchart TD
     D --> G[Schema-grounded LLM query assistant]
 ```
 
+## Input to Meaningful Output
+
+```mermaid
+flowchart LR
+    I1[Demo MIMIC-IV CSV/GZ] --> P[Warehouse Pipeline]
+    I2[Full Local MIMIC-IV CSV/GZ] --> P
+    I3[LocalStack S3 MIMIC-style files] --> P
+
+    P --> B[Bronze raw ingestion]
+    B --> S[Silver cleaned clinical tables]
+    S --> G[Gold analytics marts + first-24h features + cohorts]
+
+    G --> O1[Aggregate ICU and admission insights]
+    G --> O2[Research-ready cohort summaries]
+    G --> O3[Aggregate API + dashboard analytics]
+    G --> O4[Guarded NL-to-SQL aggregate querying]
+    G --> O5[Professor-facing reproducible artifacts]
+```
+
+## Project Diagrams
+
+### 1) End-to-End Pipeline
+
+```mermaid
+flowchart LR
+    A[Source Data] --> B[Bronze Layer]
+    B --> C[Silver Layer]
+    C --> D[Gold Layer]
+    D --> E[Validation + Reports]
+    D --> F[Streamlit Dashboard]
+    D --> G[FastAPI Aggregate API]
+    D --> H[LLM Query Assistant]
+
+    A1[Demo CSV/GZ] --> A
+    A2[Full Local CSV/GZ] --> A
+    A3[LocalStack S3 Objects] --> A
+```
+
+### 2) Core Clinical Data Model
+
+```mermaid
+flowchart TD
+    P[patients] --> A[admissions]
+    A --> I[icustays]
+
+    A --> D1[diagnoses]
+    A --> D2[procedures]
+    A --> D3[labs]
+    A --> D4[microbiology]
+    A --> D5[medications]
+
+    I --> E1[chart events]
+    I --> E2[input events]
+    I --> E3[output events]
+    I --> E4[procedure events]
+```
+
+### 3) Execution Modes
+
+```mermaid
+flowchart TD
+    M{Execution Mode}
+    M --> M1[demo]
+    M --> M2[full_local]
+    M --> M3[localstack]
+
+    M1 --> R1[data/raw/mimic-iv-demo/2.2]
+    M2 --> R2[data/raw/mimic-iv/3.1]
+    M3 --> R3[s3://bucket/prefix/hosp + icu]
+
+    R1 --> W[DuckDB Warehouse]
+    R2 --> W
+    R3 --> W
+```
+
+### 4) Safety and Guardrails
+
+```mermaid
+flowchart LR
+    Q[Natural language or SQL input] --> G[SQL Guardrails]
+    G -->|allow| X[Aggregate query execution]
+    G -->|reject| Y[Blocked with reason]
+
+    X --> Z[Gold/Silver aggregate outputs]
+    Z --> UI[Dashboard/API response]
+
+    P1[Blocked: DROP/DELETE/UPDATE/INSERT] --> G
+    P2[Blocked: SELECT *] --> G
+    P3[Blocked: Bronze table access] --> G
+    P4[Blocked: raw ID projection] --> G
+```
+
 ## Dataset Access
 
 The default configuration targets the MIMIC-IV Clinical Database Demo folder structure:
