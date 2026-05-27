@@ -45,6 +45,14 @@ class WarehouseConfig:
     project_id: str | None = None
     hosp_dataset: str | None = None
     icu_dataset: str | None = None
+    localstack_endpoint: str | None = None
+    localstack_region: str = "us-east-1"
+    localstack_access_key: str = "test"
+    localstack_secret_key: str = "test"
+    localstack_bucket: str | None = None
+    localstack_prefix: str = "mimic-iv-demo/2.2"
+    localstack_use_ssl: bool = False
+    localstack_url_style: str = "path"
     bronze_schema_policy: str = "lowercase_snake_case"
     pipeline_run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     llm: LLMConfig = field(default_factory=LLMConfig)
@@ -69,6 +77,10 @@ def _env_override(raw: dict[str, Any]) -> dict[str, Any]:
         merged["public_mode"] = _as_bool(os.environ["MIMIC_PUBLIC_MODE"], True)
     if os.getenv("GOOGLE_CLOUD_PROJECT"):
         merged["project_id"] = os.environ["GOOGLE_CLOUD_PROJECT"]
+    if os.getenv("LOCALSTACK_ENDPOINT"):
+        merged["localstack_endpoint"] = os.environ["LOCALSTACK_ENDPOINT"]
+    if os.getenv("LOCALSTACK_BUCKET"):
+        merged["localstack_bucket"] = os.environ["LOCALSTACK_BUCKET"]
     return merged
 
 
@@ -163,6 +175,14 @@ def load_config(config_path: str | Path) -> WarehouseConfig:
         project_id=raw.get("project_id"),
         hosp_dataset=raw.get("hosp_dataset"),
         icu_dataset=raw.get("icu_dataset"),
+        localstack_endpoint=raw.get("localstack_endpoint"),
+        localstack_region=str(raw.get("localstack_region", "us-east-1")),
+        localstack_access_key=str(raw.get("localstack_access_key", "test")),
+        localstack_secret_key=str(raw.get("localstack_secret_key", "test")),
+        localstack_bucket=raw.get("localstack_bucket"),
+        localstack_prefix=str(raw.get("localstack_prefix", "mimic-iv-demo/2.2")),
+        localstack_use_ssl=_as_bool(raw.get("localstack_use_ssl"), False),
+        localstack_url_style=str(raw.get("localstack_url_style", "path")),
         bronze_schema_policy=str(raw.get("bronze_schema_policy", "lowercase_snake_case")),
         llm=llm,
     )

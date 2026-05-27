@@ -9,9 +9,11 @@ from pathlib import Path
 from src.core.config import WarehouseConfig, load_config
 from src.core.db import connect
 from src.core.logging import configure_logging
+from src.ingest.check_localstack import check_localstack_sources
 from src.ingest.load_bigquery_metadata import load_bigquery_metadata
 from src.ingest.load_demo import load_local_files
 from src.ingest.load_full_local import load_full_local
+from src.ingest.load_localstack_s3 import load_localstack_s3
 from src.ingest.seed_synthetic import seed_synthetic_demo_data
 from src.llm.evaluate_sql import run_sql_evaluation
 from src.llm.nl_to_sql import answer_question
@@ -62,6 +64,8 @@ def ingest(config: WarehouseConfig) -> Path:
     """Run configured ingestion mode."""
     if config.mode == "bigquery":
         return load_bigquery_metadata(config)
+    if config.mode == "localstack":
+        return load_localstack_s3(config)
     if config.mode == "full_local":
         return load_full_local(config)
     return load_local_files(config)
@@ -83,6 +87,13 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     config = _load_config_arg(args)
     report = ingest(config)
     print(f"Ingestion complete. Report: {report}")
+    return 0
+
+
+def cmd_localstack_check(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    report = check_localstack_sources(config)
+    print(f"LocalStack readiness report: {report}")
     return 0
 
 
@@ -237,6 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands = {
         "seed-synthetic": cmd_seed_synthetic,
+        "localstack-check": cmd_localstack_check,
         "ingest": cmd_ingest,
         "build-bronze": cmd_build_bronze,
         "build-silver": cmd_build_silver,

@@ -38,9 +38,12 @@ data/raw/mimic-iv/3.1/icu/
 
 BigQuery mode is represented by `configs/bigquery.yaml.example`. Credentials are never stored in the repository.
 
+If you use LocalStack, see `configs/localstack.s3.yaml.example` for an S3-backed execution mode.
+
 ## Execution Map
 
 Detailed execution responsibilities and the prioritized roadmap are documented in `AGENTS.md`.
+PRD closure status is documented in `docs/09_prd_completion_checklist.md`.
 
 ## Setup
 
@@ -63,16 +66,21 @@ The synthetic seed writes fake records into the ignored `data/raw/` directory. I
 
 ```bash
 make seed-synthetic
+make localstack-check
 make ingest-demo
+make ingest-localstack
 make build-bronze
 make build-silver
 make build-gold
 make validate
 make profile
 make run-all
+make run-localstack
 make llm-eval
 make ml-baseline
 make demo-pack
+make precommit-install
+make precommit-run
 ```
 
 The pipeline is tolerant of missing optional demo files. If no raw files are present, it creates empty typed warehouse tables and private warning reports so the repo can still be smoke-tested without exposing data.
@@ -86,6 +94,27 @@ make ci
 This command performs setup, synthetic seeding, end-to-end pipeline build, tests, and LLM guardrail demo checks.
 
 `make demo-pack` generates a reviewer-ready synthetic outreach bundle in `outputs/public/`.
+
+## LocalStack S3 Mode
+
+This mode is useful when BigQuery is not available. It ingests MIMIC-style CSV objects from LocalStack S3 and runs the same Bronze/Silver/Gold pipeline.
+
+Steps:
+
+1. Start LocalStack and create a bucket (example: `mimic`).
+2. Upload files using the expected folder structure:
+   - `s3://mimic/mimic-iv-demo/2.2/hosp/*.csv[.gz]`
+   - `s3://mimic/mimic-iv-demo/2.2/icu/*.csv[.gz]`
+3. Adjust `configs/localstack.s3.yaml.example` if endpoint/bucket/prefix differ.
+4. Run:
+
+```bash
+make localstack-check
+make ingest-localstack
+make run-localstack
+```
+
+`make localstack-check` writes `outputs/private/localstack_readiness_report.md` so you can verify file coverage before ingestion.
 
 ## Dashboard
 
@@ -147,6 +176,21 @@ The optional query assistant is schema-grounded and aggregate-only. It rejects d
 ## Compliance
 
 Public-safe outputs include code, SQL templates, diagrams, synthetic examples, documentation, aggregate statistics, and demo/synthetic screenshots. Do not commit raw MIMIC-IV rows, subject IDs, admission IDs, stay IDs, event-level exports, patient-level screenshots, credentials, or generated examples copied from real records.
+
+## Collaboration Hygiene
+
+This repository includes:
+
+- pull request template: `.github/pull_request_template.md`
+- issue templates: `.github/ISSUE_TEMPLATE/*`
+- local pre-commit checks: `.pre-commit-config.yaml`
+
+Install and run hooks:
+
+```bash
+make precommit-install
+make precommit-run
+```
 
 ## Limitations
 

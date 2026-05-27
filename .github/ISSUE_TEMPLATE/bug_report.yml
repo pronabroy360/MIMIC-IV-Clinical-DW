@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible bug in the warehouse pipeline, dashboard, API, or docs.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please do not include restricted MIMIC-IV rows, IDs, or screenshots with patient-level data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+      placeholder: Describe the bug in one short paragraph.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide exact commands and config mode.
+      placeholder: |
+        1. make seed-synthetic
+        2. make run-all
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Data mode
+      options:
+        - demo
+        - full_local
+        - localstack
+        - bigquery
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and traces
+      description: Paste sanitized error logs only.
+      render: shell

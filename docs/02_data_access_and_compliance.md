@@ -20,6 +20,34 @@ data/raw/mimic-iv/3.1/icu/
 
 BigQuery mode is represented by `configs/bigquery.yaml.example` and requires credentials configured outside the repository.
 
+## LocalStack S3 Mode
+
+For cloud-like local testing without BigQuery, use `mode: localstack` with `configs/localstack.s3.yaml.example`.
+
+Recommended preflight:
+
+```bash
+make localstack-check
+```
+
+This writes `outputs/private/localstack_readiness_report.md` and helps confirm expected `hosp/` and `icu/` source objects before ingestion.
+
+Expected object paths:
+
+- `s3://<bucket>/<prefix>/hosp/*.csv` or `.csv.gz`
+- `s3://<bucket>/<prefix>/icu/*.csv` or `.csv.gz`
+
+This mode is still subject to the same privacy and DUA-safe output rules: no restricted rows are committed to the repo.
+
+Common LocalStack troubleshooting:
+
+- `Could not connect to server` in readiness report:
+  - Ensure LocalStack is running and `localstack_endpoint` is reachable.
+- `0 available source objects`:
+  - Verify bucket/prefix and file layout under `hosp/` and `icu/`.
+- Tables load as placeholders:
+  - This is expected when optional files are absent; check ingestion report for per-table status.
+
 ## Synthetic Local Demo
 
 When no MIMIC-IV files are available, run:

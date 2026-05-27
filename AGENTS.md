@@ -31,7 +31,7 @@ Latest validation status from `outputs/private/validation_report.md`:
 
 Latest test status:
 
-- `pytest` suite: `10 passed`
+- `pytest` suite: `11 passed`
 
 ## Agent Map
 
@@ -273,30 +273,13 @@ Current controls carrying out:
 
 These are not failures; they are the current development edge:
 
-1. BigQuery mode is metadata-oriented and does not yet execute full transformation jobs from cloud tables.
-2. `silver_provider_orders` is currently empty in synthetic seed because `poe`/`poe_detail` are not seeded.
-3. Baseline ML notebook scaffold exists, but end-to-end benchmark reporting is not fully productized in CLI.
-4. No release versioning/changelog workflow yet.
+1. BigQuery mode remains metadata-oriented (cloud execution path is not yet implemented end-to-end).
+2. LocalStack ingestion depends on the expected S3 object layout; missing tables produce placeholders by design.
+3. LocalStack production use still depends on endpoint/bucket availability and object coverage.
 
 ## Next Steps (Prioritized)
 
-### Priority 1: Reviewer-Ready Demonstration Pack
-
-Goal:
-
-- Make one command produce all demo artifacts for outreach.
-
-Tasks:
-
-1. Add `make demo-pack` to run `seed-synthetic`, `run-all`, `report`, LLM eval, and ML baseline.
-2. Add `docs/demo_walkthrough.md` with a 5-7 minute script and exact commands.
-3. Add an outputs index file listing generated aggregate artifacts.
-
-Acceptance criteria:
-
-- A collaborator can clone the repo, run one command, and get an end-to-end demo package in under 10 minutes.
-
-### Priority 2: BigQuery Execution Path (Credentialed Users)
+### Priority 1: BigQuery Execution Path (Credentialed Users)
 
 Goal:
 
@@ -312,53 +295,37 @@ Acceptance criteria:
 
 - With credentials available locally, full gold build completes from BigQuery-backed sources.
 
-### Priority 3: Cohort and Feature Quality Expansion
+### Priority 2: API and LocalStack Hardening
 
 Goal:
 
-- Increase research utility and transparency.
+- Improve operational reliability for local and API usage.
 
 Tasks:
 
-1. Add cohort-level unit tests for expected columns and non-negative counts.
-2. Add feature completeness dashboard summaries by cohort.
-3. Add explicit leakage audit checklist for first-24h feature SQL.
+1. Expand API tests with edge-case payloads and error-path assertions.
+2. Keep explicit LocalStack readiness checks in the runbook (`make localstack-check`).
+3. Add clearer runbook notes for common LocalStack misconfiguration errors.
 
 Acceptance criteria:
 
-- Cohort summaries and feature completeness checks are test-covered and documented.
+- LocalStack/API issues can be diagnosed quickly without code changes.
 
-### Priority 4: ML Baseline Operationalization
+### Priority 3: Performance and Incremental Build Hardening
 
 Goal:
 
-- Convert notebook-only baseline into reproducible CLI module.
+- Improve robustness for full-mode large-table execution.
 
 Tasks:
 
-1. Add `src/ml/train_baseline.py` for logistic regression baseline.
-2. Save aggregate metrics only (`AUROC`, `AUPRC`, `F1`, precision, recall, calibration summary) to `outputs/public/aggregate_results/`.
-3. Add patient-level split logic and reproducible seed controls.
+1. Add incremental table rebuild controls for large event tables.
+2. Add documented performance baselines for demo vs full-local runs.
+3. Add table-level runtime profiling output to support optimization.
 
 Acceptance criteria:
 
-- A single command trains and reports baseline metrics without writing patient-level predictions.
-
-### Priority 5: Release and Collaboration Hygiene
-
-Goal:
-
-- Improve maintainability and external collaboration flow.
-
-Tasks:
-
-1. Add `CHANGELOG.md`.
-2. Add pull request and issue templates.
-3. Add pre-commit checks (format/lint/test subset).
-
-Acceptance criteria:
-
-- Every PR has consistent metadata and passes local quality checks before merge.
+- Full-mode users can tune runtime and avoid unnecessary full rebuilds.
 
 ## Operator Runbook
 
@@ -368,7 +335,16 @@ Fast path for local synthetic demo:
 make setup
 make seed-synthetic
 make run-all
+make report
 make dashboard
+```
+
+Fast path for LocalStack preflight:
+
+```bash
+make localstack-check
+make ingest-localstack
+make run-localstack
 ```
 
 Fast path for reproducibility gate:

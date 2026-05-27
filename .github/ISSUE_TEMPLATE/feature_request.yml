@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a project improvement aligned with the clinical warehouse PRD.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user/research workflow is blocked today?
+      placeholder: Describe the gap clearly.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should we build?
+      placeholder: Describe behavior, not just implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: prd
+    attributes:
+      label: PRD alignment
+      description: Which PRD section does this map to?
+      placeholder: FR8 Dashboard, FR9 API, NFR Reproducibility, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this is done?
+      placeholder: List measurable checks.
+    validations:
+      required: true

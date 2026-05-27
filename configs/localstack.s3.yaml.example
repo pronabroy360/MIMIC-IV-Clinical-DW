@@ -1,0 +1,25 @@
+mode: localstack
+database_path: data/processed/mimic_localstack.duckdb
+public_mode: false
+outputs_private_path: outputs/private
+outputs_public_path: outputs/public
+
+localstack_endpoint: localhost:4566
+localstack_region: us-east-1
+localstack_access_key: test
+localstack_secret_key: test
+localstack_bucket: mimic
+localstack_prefix: mimic-iv-demo/2.2
+localstack_use_ssl: false
+localstack_url_style: path
+
+llm:
+  allowed_tables:
+    - gold_patient_summary
+    - gold_admission_summary
+    - gold_icu_stay_summary
+    - gold_first_24h_features
+    - gold_lab_features
+    - gold_vital_features
+    - gold_diagnosis_features
+  default_limit: 100
