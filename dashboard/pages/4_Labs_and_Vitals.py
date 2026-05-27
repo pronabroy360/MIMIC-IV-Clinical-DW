@@ -8,6 +8,24 @@ from dashboard.components.charts import bar_chart
 from dashboard.components.queries import query_df
 
 st.title("Labs and Vitals")
+st.warning("Aggregate analytics only. Patient-level rows and raw identifiers are not displayed.")
+
+common_labs = query_df(
+    """
+    SELECT
+        lab_label,
+        count(*) AS event_count,
+        avg(is_abnormal) AS abnormal_rate
+    FROM silver_labs
+    WHERE lab_label IS NOT NULL
+    GROUP BY lab_label
+    ORDER BY event_count DESC
+    LIMIT 15
+    """
+)
+st.subheader("Most common lab tests")
+bar_chart(common_labs, "lab_label", "event_count", "Top lab tests by event count")
+st.dataframe(common_labs, hide_index=True, use_container_width=True)
 
 lab_completeness = query_df(
     """

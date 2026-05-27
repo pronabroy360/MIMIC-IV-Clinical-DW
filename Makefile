@@ -2,7 +2,7 @@ SYSTEM_PYTHON ?= python3
 VENV ?= .venv
 PYTHON ?= $(VENV)/bin/python
 
-.PHONY: setup seed-synthetic ingest-demo build-bronze build-silver build-gold validate profile run-all dashboard api test llm-demo report ci
+.PHONY: setup seed-synthetic ingest-demo build-bronze build-silver build-gold validate profile run-all dashboard api test llm-demo llm-eval ml-baseline demo-pack report ci
 
 setup:
 	$(SYSTEM_PYTHON) -m venv $(VENV)
@@ -45,6 +45,15 @@ test:
 llm-demo:
 	$(PYTHON) -m src.cli llm-demo --config configs/demo.duckdb.yaml
 
+llm-eval:
+	$(PYTHON) -m src.cli llm-eval --config configs/demo.duckdb.yaml
+
+ml-baseline:
+	$(PYTHON) -m src.cli ml-baseline --config configs/demo.duckdb.yaml
+
+demo-pack:
+	$(PYTHON) -m src.cli demo-pack --config configs/demo.duckdb.yaml
+
 report:
 	$(PYTHON) -m src.cli report --config configs/demo.duckdb.yaml
 
@@ -54,3 +63,5 @@ ci:
 	$(MAKE) run-all
 	$(MAKE) test
 	$(MAKE) llm-demo
+	$(MAKE) llm-eval
+	$(MAKE) ml-baseline

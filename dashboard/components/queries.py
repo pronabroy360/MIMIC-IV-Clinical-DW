@@ -76,6 +76,148 @@ def cohort_summary(cohort_name: str) -> pd.DataFrame:
     return query_df(path.read_text())
 
 
+def _cohort_rows_cte_sql(cohort_name: str) -> str:
+    if cohort_name == "adult_icu_first_stay":
+        return """
+        SELECT subject_id, hadm_id, stay_id
+        FROM gold_icu_stay_summary
+        WHERE is_first_icu_stay = 1
+          AND age_at_admission >= 18
+          AND intime IS NOT NULL
+          AND outtime IS NOT NULL
+          AND icu_los_days > 0
+        """
+    if cohort_name == "sepsis_like_cohort":
+        return """
+        WITH diagnosis_flags AS (
+            SELECT
+                hadm_id,
+                max(CASE
+                    WHEN lower(coalesce(diagnosis_label, '')) LIKE '%sepsis%'
+                      OR lower(coalesce(diagnosis_label, '')) LIKE '%septic%'
+                      OR lower(coalesce(diagnosis_label, '')) LIKE '%infection%'
+                      OR lower(coalesce(diagnosis_label, '')) LIKE '%pneumonia%'
+                      OR lower(coalesce(diagnosis_label, '')) LIKE '%bacteremia%'
+                    THEN 1 ELSE 0
+                END) AS sepsis_diagnosis_flag
+            FROM silver_diagnoses
+            GROUP BY hadm_id
+        )
+        SELECT i.subject_id, i.hadm_id, i.stay_id
+        FROM gold_icu_stay_summary i
+        JOIN diagnosis_flags d ON i.hadm_id = d.hadm_id
+        WHERE d.sepsis_diagnosis_flag = 1
+        """
+    if cohort_name == "heart_failure_cohort":
+        return """
+        WITH hf_admissions AS (
+            SELECT DISTINCT hadm_id
+            FROM silver_diagnoses
+            WHERE lower(coalesce(diagnosis_label, '')) LIKE '%heart failure%'
+               OR lower(coalesce(diagnosis_label, '')) LIKE '%congestive%'
+               OR icd_code LIKE 'I50%'
+               OR icd_code LIKE '428%'
+        )
+        SELECT i.subject_id, i.hadm_id, i.stay_id
+        FROM gold_icu_stay_summary i
+        JOIN hf_admissions h ON i.hadm_id = h.hadm_id
+        """
+    if cohort_name == "ventilation_like_cohort":
+        return """
+        WITH events AS (
+            SELECT subject_id, hadm_id, stay_id
+            FROM silver_procedure_events
+            WHERE lower(coalesce(procedure_event_label, '')) LIKE '%ventilat%'
+               OR lower(coalesce(procedure_event_label, '')) LIKE '%intubat%'
+            UNION
+            SELECT subject_id, hadm_id, stay_id
+            FROM silver_chart_events
+            WHERE lower(coalesce(chart_label, '')) LIKE '%ventilat%'
+               OR lower(coalesce(chart_label, '')) LIKE '%intubat%'
+        )
+        SELECT DISTINCT subject_id, hadm_id, stay_id
+        FROM events
+        """
+    if cohort_name == "high_lab_utilization_cohort":
+        return """
+        WITH lab_counts AS (
+            SELECT
+                i.subject_id,
+                i.hadm_id,
+                i.stay_id,
+                count(l.itemid) AS lab_event_count
+            FROM silver_icustays i
+            LEFT JOIN silver_labs l
+                ON i.hadm_id = l.hadm_id
+               AND l.charttime >= i.intime
+               AND l.charttime < i.outtime
+            GROUP BY i.subject_id, i.hadm_id, i.stay_id
+        ),
+        ranked AS (
+            SELECT
+                *,
+                cume_dist() OVER (ORDER BY lab_event_count) AS lab_utilization_percentile
+            FROM lab_counts
+        )
+        SELECT subject_id, hadm_id, stay_id
+        FROM ranked
+        WHERE lab_utilization_percentile >= 0.75
+        """
+    raise ValueError(f"Unknown cohort: {cohort_name}")
+
+
+def cohort_detail_tables(cohort_name: str) -> dict[str, pd.DataFrame]:
+    """Return aggregate demographics, outcomes, and feature completeness for a cohort."""
+    cohort_rows = _cohort_rows_cte_sql(cohort_name)
+    demographics = query_df(
+        f"""
+        WITH cohort_rows AS ({cohort_rows})
+        SELECT
+            count(*) AS cohort_stay_count,
+            count(DISTINCT s.subject_id) AS cohort_patient_count,
+            avg(s.age_at_admission) AS avg_age_at_admission,
+            avg(CASE WHEN s.gender = 'F' THEN 1 ELSE 0 END) AS female_rate,
+            count(DISTINCT s.race) AS race_category_count
+        FROM gold_icu_stay_summary s
+        JOIN cohort_rows c
+          ON s.stay_id = c.stay_id
+        """
+    )
+    outcomes = query_df(
+        f"""
+        WITH cohort_rows AS ({cohort_rows})
+        SELECT
+            avg(s.icu_los_days) AS avg_icu_los_days,
+            avg(a.hospital_los_days) AS avg_hospital_los_days,
+            avg(s.icu_mortality_flag) AS icu_mortality_rate,
+            avg(s.hospital_mortality_flag) AS hospital_mortality_rate
+        FROM gold_icu_stay_summary s
+        JOIN cohort_rows c
+          ON s.stay_id = c.stay_id
+        LEFT JOIN gold_admission_summary a
+          ON s.hadm_id = a.hadm_id
+        """
+    )
+    feature_completeness = query_df(
+        f"""
+        WITH cohort_rows AS ({cohort_rows})
+        SELECT
+            avg(CASE WHEN f.heart_rate_mean IS NOT NULL THEN 1 ELSE 0 END) AS heart_rate_completeness,
+            avg(CASE WHEN f.creatinine_mean IS NOT NULL THEN 1 ELSE 0 END) AS creatinine_completeness,
+            avg(CASE WHEN f.lactate_mean IS NOT NULL THEN 1 ELSE 0 END) AS lactate_completeness,
+            avg(CASE WHEN f.wbc_mean IS NOT NULL THEN 1 ELSE 0 END) AS wbc_completeness
+        FROM gold_first_24h_features f
+        JOIN cohort_rows c
+          ON f.stay_id = c.stay_id
+        """
+    )
+    return {
+        "demographics": demographics,
+        "outcomes": outcomes,
+        "feature_completeness": feature_completeness,
+    }
+
+
 def cohort_names() -> list[str]:
     """Return available cohort names."""
     return sorted(path.stem for path in (project_root() / "sql" / "cohorts").glob("*.sql"))

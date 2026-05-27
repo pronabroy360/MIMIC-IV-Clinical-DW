@@ -181,11 +181,13 @@ What it is carrying out now:
 - Provides rule-based NL-to-SQL for predefined aggregate analytics prompts.
 - Rejects unsafe SQL patterns (`DROP`, `DELETE`, `SELECT *`, bronze access, raw ID projection, non-aggregate queries).
 - Logs generated queries to `outputs/private/llm_query_log.jsonl`.
+- Generates generated-vs-manual SQL comparison artifacts through `make llm-eval`.
 
 Current status:
 
 - Stable.
 - 20 predefined aggregate questions run through `make llm-demo`.
+- Evaluation artifacts are produced in `outputs/public/aggregate_results/`.
 
 ### 9. Dashboard Agent
 
@@ -286,7 +288,7 @@ Goal:
 
 Tasks:
 
-1. Add `make demo-pack` to run `seed-synthetic`, `run-all`, `report`, and export chart snapshots.
+1. Add `make demo-pack` to run `seed-synthetic`, `run-all`, `report`, LLM eval, and ML baseline.
 2. Add `docs/demo_walkthrough.md` with a 5-7 minute script and exact commands.
 3. Add an outputs index file listing generated aggregate artifacts.
 
@@ -383,4 +385,3 @@ This current phase is considered complete when all are true:
 2. Dashboard and API run with aggregate-only outputs.
 3. Validation report remains zero-fail on synthetic flow.
 4. Repo remains public-safe with no restricted data leakage.
-

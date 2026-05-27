@@ -13,7 +13,9 @@ from src.ingest.load_bigquery_metadata import load_bigquery_metadata
 from src.ingest.load_demo import load_local_files
 from src.ingest.load_full_local import load_full_local
 from src.ingest.seed_synthetic import seed_synthetic_demo_data
+from src.llm.evaluate_sql import run_sql_evaluation
 from src.llm.nl_to_sql import answer_question
+from src.ml.train_baseline import train_logistic_baseline, write_baseline_outputs
 from src.reporting.generate_data_dictionary import generate_data_dictionary
 from src.reporting.generate_pipeline_report import generate_pipeline_report
 from src.reporting.generate_professor_summary import generate_professor_summary
@@ -165,6 +167,22 @@ def cmd_llm_demo(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_llm_eval(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    build_gold(config)
+    with connect(config) as con:
+        comparison_path, summary_path = run_sql_evaluation(
+            con,
+            output_private_dir=config.outputs_private_path,
+            output_public_dir=config.outputs_public_path / "aggregate_results",
+            allowed_tables=set(config.llm.allowed_tables),
+            default_limit=config.llm.default_limit,
+        )
+    print(f"Public comparison file: {comparison_path}")
+    print(f"Public summary file: {summary_path}")
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     config = _load_config_arg(args)
     data_dictionary = generate_data_dictionary(config)
@@ -173,6 +191,42 @@ def cmd_report(args: argparse.Namespace) -> int:
     print(f"Data dictionary: {data_dictionary}")
     print(f"Pipeline report: {pipeline_report}")
     print(f"Professor summary: {professor_summary}")
+    return 0
+
+
+def cmd_ml_baseline(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    build_gold(config)
+    result = train_logistic_baseline(config)
+    csv_path, md_path = write_baseline_outputs(config, result)
+    print(f"ML baseline metrics CSV: {csv_path}")
+    print(f"ML baseline metrics summary: {md_path}")
+    return 0
+
+
+def cmd_demo_pack(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    seed_synthetic_demo_data(config, overwrite=True)
+    ingest(config)
+    build_gold(config)
+    run_validation(config)
+    generate_data_dictionary(config)
+    generate_pipeline_report(config)
+    generate_professor_summary(config)
+    with connect(config) as con:
+        run_sql_evaluation(
+            con,
+            output_private_dir=config.outputs_private_path,
+            output_public_dir=config.outputs_public_path / "aggregate_results",
+            allowed_tables=set(config.llm.allowed_tables),
+            default_limit=config.llm.default_limit,
+        )
+    try:
+        baseline = train_logistic_baseline(config)
+        write_baseline_outputs(config, baseline)
+    except RuntimeError as exc:
+        print(f"ML baseline skipped: {exc}")
+    print(f"Demo pack generated under: {config.outputs_public_path}")
     return 0
 
 
@@ -191,6 +245,9 @@ def build_parser() -> argparse.ArgumentParser:
         "profile": cmd_profile,
         "run-all": cmd_run_all,
         "llm-demo": cmd_llm_demo,
+        "llm-eval": cmd_llm_eval,
+        "ml-baseline": cmd_ml_baseline,
+        "demo-pack": cmd_demo_pack,
         "report": cmd_report,
     }
     for name, handler in commands.items():

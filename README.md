@@ -70,6 +70,9 @@ make build-gold
 make validate
 make profile
 make run-all
+make llm-eval
+make ml-baseline
+make demo-pack
 ```
 
 The pipeline is tolerant of missing optional demo files. If no raw files are present, it creates empty typed warehouse tables and private warning reports so the repo can still be smoke-tested without exposing data.
@@ -81,6 +84,8 @@ make ci
 ```
 
 This command performs setup, synthetic seeding, end-to-end pipeline build, tests, and LLM guardrail demo checks.
+
+`make demo-pack` generates a reviewer-ready synthetic outreach bundle in `outputs/public/`.
 
 ## Dashboard
 

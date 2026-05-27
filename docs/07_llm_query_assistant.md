@@ -36,3 +36,12 @@ SELECT count(*) FROM bronze_hosp_patients;
 ## Evaluation Plan
 
 The command `make llm-demo` runs 20 predefined aggregate questions and writes generated SQL to `outputs/private/llm_query_log.jsonl`.
+
+The command `make llm-eval` generates a comparison artifact between generated SQL and manually authored SQL references:
+
+- `outputs/public/aggregate_results/llm_sql_evaluation_comparison.csv`
+- `outputs/public/aggregate_results/llm_sql_evaluation_summary.md`
+
+Detailed private copy:
+
+- `outputs/private/llm_sql_evaluation_detailed.csv`
