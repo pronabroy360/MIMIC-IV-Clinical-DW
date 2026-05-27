@@ -13,6 +13,8 @@ This file is written for:
 
 As of: `2026-05-27`
 
+Project completion status for declared scope: `Complete` (Demo + Full Local + LocalStack paths).
+
 ## Current System Snapshot
 
 Latest local execution mode: synthetic demo seed on `configs/demo.duckdb.yaml`.
@@ -273,43 +275,43 @@ Current controls carrying out:
 
 These are not failures; they are the current development edge:
 
-1. BigQuery mode remains metadata-oriented (cloud execution path is not yet implemented end-to-end).
+1. BigQuery execution is intentionally out of scope for this repository (metadata scaffold only).
 2. LocalStack ingestion depends on the expected S3 object layout; missing tables produce placeholders by design.
-3. LocalStack production use still depends on endpoint/bucket availability and object coverage.
+3. LocalStack production use depends on endpoint/bucket availability and object coverage.
 
 ## Next Steps (Prioritized)
 
-### Priority 1: BigQuery Execution Path (Credentialed Users)
+### Priority 1: LocalStack Operational Hardening
 
 Goal:
 
-- Move from metadata-only to runnable cloud query path.
+- Improve reliability of the selected cloud-style path in this repo.
 
 Tasks:
 
-1. Add read-only BigQuery adapters for hosp/icu source datasets.
-2. Add SQL compatibility layer or extraction step to materialize required bronze/silver inputs into DuckDB.
-3. Add docs for secure auth and local-only credential handling.
+1. Expand readiness diagnostics for endpoint and bucket checks.
+2. Add clearer operator playbooks for common networking/path failures.
+3. Add optional smoke command that runs readiness + ingest + profile summary.
 
 Acceptance criteria:
 
-- With credentials available locally, full gold build completes from BigQuery-backed sources.
+- Operators can diagnose LocalStack ingestion issues quickly.
 
-### Priority 2: API and LocalStack Hardening
+### Priority 2: API Hardening
 
 Goal:
 
-- Improve operational reliability for local and API usage.
+- Improve API resilience and edge-case behavior.
 
 Tasks:
 
 1. Expand API tests with edge-case payloads and error-path assertions.
-2. Keep explicit LocalStack readiness checks in the runbook (`make localstack-check`).
-3. Add clearer runbook notes for common LocalStack misconfiguration errors.
+2. Add request validation boundary tests for payload shapes.
+3. Add response contract snapshots for aggregate endpoints.
 
 Acceptance criteria:
 
-- LocalStack/API issues can be diagnosed quickly without code changes.
+- API issues can be diagnosed quickly without code changes.
 
 ### Priority 3: Performance and Incremental Build Hardening
 

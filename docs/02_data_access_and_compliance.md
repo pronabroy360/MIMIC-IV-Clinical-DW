@@ -18,7 +18,7 @@ data/raw/mimic-iv/3.1/hosp/
 data/raw/mimic-iv/3.1/icu/
 ```
 
-BigQuery mode is represented by `configs/bigquery.yaml.example` and requires credentials configured outside the repository.
+BigQuery full execution is intentionally out of scope for this portfolio repository. A metadata-only scaffold is represented by `configs/bigquery.yaml.example`, and any credentials must remain outside the repository.
 
 ## LocalStack S3 Mode
 

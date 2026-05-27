@@ -8,6 +8,7 @@ Status legend:
 - `Done`: implemented and verified in code/tests/artifacts.
 - `Partial`: implemented scaffold, but full execution depends on credentials or future work.
 - `Optional`: intentionally optional in PRD; implemented where noted.
+- `Out of Scope`: explicitly excluded from this repository build scope.
 
 ## 1. Repository and Architecture
 
@@ -25,8 +26,8 @@ Evidence:
 
 - Demo mode (`configs/demo.duckdb.yaml`): `Done`
 - Full local mode (`configs/full_local.duckdb.yaml`): `Done`
-- BigQuery mode scaffold (`configs/bigquery.yaml.example`): `Partial` (metadata path only)
-- LocalStack S3 mode (replacement path for no-BigQuery environments): `Done`
+- BigQuery full execution path: `Out of Scope` (metadata-only scaffold retained)
+- LocalStack S3 mode (cloud-style execution path for this repo): `Done`
 
 Evidence:
 - `src/ingest/load_demo.py`
@@ -153,6 +154,13 @@ Evidence:
 - Issue templates: `Done`
 - Pre-commit config and make targets: `Done`
 
-## 14. Remaining Work for Strict “100% PRD + Production” Claim
+## 14. Final Scope Status
 
-1. BigQuery full execution path (currently metadata-only).
+This repository is complete for its declared scope:
+- demo mode
+- full local credentialed mode
+- LocalStack S3 cloud-style mode
+- aggregate dashboard/API/LLM guardrails
+- validation, tests, docs, and outreach package
+
+BigQuery execution is intentionally excluded from this scope and tracked as a future extension path only.

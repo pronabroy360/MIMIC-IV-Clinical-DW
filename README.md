@@ -36,7 +36,7 @@ data/raw/mimic-iv/3.1/hosp/
 data/raw/mimic-iv/3.1/icu/
 ```
 
-BigQuery mode is represented by `configs/bigquery.yaml.example`. Credentials are never stored in the repository.
+BigQuery execution is intentionally out of scope for this public portfolio build. A metadata-only scaffold is kept in `configs/bigquery.yaml.example` for future credentialed extension, and credentials are never stored in the repository.
 
 If you use LocalStack, see `configs/localstack.s3.yaml.example` for an S3-backed execution mode.
 
@@ -97,7 +97,7 @@ This command performs setup, synthetic seeding, end-to-end pipeline build, tests
 
 ## LocalStack S3 Mode
 
-This mode is useful when BigQuery is not available. It ingests MIMIC-style CSV objects from LocalStack S3 and runs the same Bronze/Silver/Gold pipeline.
+This is the cloud-style execution path used in this repository. It ingests MIMIC-style CSV objects from LocalStack S3 and runs the same Bronze/Silver/Gold pipeline.
 
 Steps:
 

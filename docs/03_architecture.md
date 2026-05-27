@@ -1,6 +1,6 @@
 # Architecture
 
-The warehouse uses a local DuckDB-first architecture with optional BigQuery metadata support.
+The warehouse uses a local DuckDB-first architecture with optional LocalStack S3 ingestion for cloud-style execution.
 
 ```mermaid
 flowchart TD
