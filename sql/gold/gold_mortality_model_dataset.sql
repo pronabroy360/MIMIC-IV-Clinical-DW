@@ -1,0 +1,36 @@
+CREATE OR REPLACE TABLE gold_mortality_model_dataset AS
+SELECT
+    f.subject_id,
+    f.hadm_id,
+    f.stay_id,
+    s.age_at_admission,
+    s.gender,
+    s.race,
+    s.admission_type,
+    s.first_careunit,
+    s.icu_los_days,
+    f.heart_rate_mean,
+    f.sbp_mean,
+    f.dbp_mean,
+    f.mbp_mean,
+    f.resp_rate_mean,
+    f.temperature_mean,
+    f.spo2_mean,
+    f.wbc_mean,
+    f.hemoglobin_mean,
+    f.platelet_mean,
+    f.creatinine_mean,
+    f.bun_mean,
+    f.sodium_mean,
+    f.potassium_mean,
+    f.glucose_mean,
+    f.lactate_mean,
+    f.chart_event_count_24h,
+    f.lab_event_count_24h,
+    f.input_event_count_24h,
+    f.output_event_count_24h,
+    f.procedure_event_count_24h,
+    f.hospital_mortality_flag
+FROM gold_first_24h_features f
+LEFT JOIN gold_icu_stay_summary s
+    ON f.stay_id = s.stay_id;

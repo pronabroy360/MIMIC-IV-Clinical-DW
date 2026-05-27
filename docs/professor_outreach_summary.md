@@ -1,0 +1,5 @@
+# Professor Outreach Summary
+
+This project builds a reproducible clinical data warehouse and analytics layer using MIMIC-IV structured EHR data. The system supports demo-mode execution using the openly accessible MIMIC-IV demo dataset and full-mode execution for credentialed PhysioNet users. It ingests hospital and ICU modules, transforms raw tables into Bronze, Silver, and Gold warehouse layers, and produces patient-, admission-, and ICU-stay-level analytical marts. The project includes cohort construction templates, first-24-hour clinical feature engineering, aggregate dashboards, validation checks, and an optional schema-grounded LLM query assistant with privacy-preserving SQL guardrails. The goal is to demonstrate responsible clinical data engineering and reproducible EHR analytics for biomedical informatics and healthcare AI research.
+
+The project is designed for review by biomedical informatics, clinical NLP, healthcare AI, ICU analytics, and responsible medical LLM labs. It emphasizes reproducibility, transparent assumptions, data quality validation, and public-safe handling of restricted EHR data.

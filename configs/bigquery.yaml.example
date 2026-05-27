@@ -1,0 +1,9 @@
+mode: bigquery
+project_id: your-gcp-project
+hosp_dataset: physionet-data.mimiciv_v3_1_hosp
+icu_dataset: physionet-data.mimiciv_v3_1_icu
+database_path: data/processed/mimic_bigquery_metadata.duckdb
+public_mode: false
+outputs_private_path: outputs/private
+outputs_public_path: outputs/public
+credentials_note: "Do not store service account JSON in this repository."

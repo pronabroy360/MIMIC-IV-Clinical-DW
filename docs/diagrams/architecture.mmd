@@ -1,0 +1,7 @@
+flowchart TD
+    A[MIMIC-IV Demo or Full CSV/GZ] --> B[Bronze Layer]
+    B --> C[Silver Layer]
+    C --> D[Gold Layer]
+    D --> E[Streamlit Dashboard]
+    D --> F[FastAPI API]
+    D --> G[LLM Query Assistant]

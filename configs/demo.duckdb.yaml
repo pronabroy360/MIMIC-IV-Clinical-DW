@@ -1,0 +1,17 @@
+mode: demo
+database_path: data/processed/mimic_demo.duckdb
+raw_data_path: data/raw/mimic-iv-demo/2.2/
+public_mode: true
+outputs_private_path: outputs/private
+outputs_public_path: outputs/public
+bronze_schema_policy: lowercase_snake_case
+llm:
+  allowed_tables:
+    - gold_patient_summary
+    - gold_admission_summary
+    - gold_icu_stay_summary
+    - gold_first_24h_features
+    - gold_lab_features
+    - gold_vital_features
+    - gold_diagnosis_features
+  default_limit: 100

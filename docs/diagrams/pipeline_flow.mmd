@@ -1,0 +1,7 @@
+flowchart LR
+    A[discover files] --> B[load Bronze]
+    B --> C[build Silver SQL]
+    C --> D[build Gold SQL]
+    D --> E[validate]
+    E --> F[private reports]
+    D --> G[dashboard/API/query assistant]

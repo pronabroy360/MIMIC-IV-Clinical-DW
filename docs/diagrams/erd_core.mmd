@@ -1,0 +1,12 @@
+erDiagram
+    PATIENTS ||--o{ ADMISSIONS : has
+    ADMISSIONS ||--o{ ICU_STAYS : includes
+    ADMISSIONS ||--o{ DIAGNOSES : has
+    ADMISSIONS ||--o{ PROCEDURES : has
+    ADMISSIONS ||--o{ LABS : has
+    ADMISSIONS ||--o{ MICROBIOLOGY : has
+    ADMISSIONS ||--o{ MEDICATIONS : has
+    ICU_STAYS ||--o{ CHART_EVENTS : has
+    ICU_STAYS ||--o{ INPUT_EVENTS : has
+    ICU_STAYS ||--o{ OUTPUT_EVENTS : has
+    ICU_STAYS ||--o{ PROCEDURE_EVENTS : has
