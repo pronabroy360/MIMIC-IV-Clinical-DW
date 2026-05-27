@@ -38,6 +38,10 @@ data/raw/mimic-iv/3.1/icu/
 
 BigQuery mode is represented by `configs/bigquery.yaml.example`. Credentials are never stored in the repository.
 
+## Execution Map
+
+Detailed execution responsibilities and the prioritized roadmap are documented in `AGENTS.md`.
+
 ## Setup
 
 ```bash
