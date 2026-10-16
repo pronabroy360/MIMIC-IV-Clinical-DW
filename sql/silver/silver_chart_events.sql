@@ -5,6 +5,7 @@ SELECT
     try_cast(c.stay_id AS BIGINT) AS stay_id,
     try_cast(c.itemid AS INTEGER) AS itemid,
     try_cast(c.charttime AS TIMESTAMP) AS charttime,
+    try_cast(c.storetime AS TIMESTAMP) AS storetime,
     coalesce(cast(d.label AS VARCHAR), cast(c.itemid AS VARCHAR)) AS chart_label,
     try_cast(c.valuenum AS DOUBLE) AS valuenum,
     cast(c.valueuom AS VARCHAR) AS valueuom,

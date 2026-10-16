@@ -136,17 +136,13 @@ def _has_terms(text: str, terms: tuple[str, ...]) -> bool:
     return all(term in text for term in terms)
 
 
-def generate_sql(question: str) -> str:
+def generate_sql(question: str) -> str | None:
     """Generate SQL for common aggregate questions using deterministic rules."""
     normalized = question.lower()
     for terms, template_key in RULES:
         if _has_terms(normalized, terms):
             return " ".join(SQL_TEMPLATES[template_key].split())
-    return (
-        "SELECT count(*) AS row_count "
-        "FROM gold_icu_stay_summary "
-        "LIMIT 100"
-    )
+    return None
 
 
 def answer_question(
@@ -158,6 +154,13 @@ def answer_question(
 ) -> dict[str, object]:
     """Generate, validate, execute, and privately log an aggregate query."""
     sql = generate_sql(question)
+    if sql is None:
+        return {
+            "allowed": False,
+            "reasons": ("Unsupported question. Please ask one of the documented aggregate questions or define a study.",),
+            "sql": None,
+            "rows": [],
+        }
     guardrail: GuardrailResult = validate_aggregate_sql(sql, allowed_tables, default_limit)
     log = {
         "timestamp": datetime.now(timezone.utc).isoformat(),

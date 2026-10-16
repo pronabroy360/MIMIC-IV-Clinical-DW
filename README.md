@@ -187,6 +187,67 @@ This command performs setup, synthetic seeding, end-to-end pipeline build, tests
 
 `make demo-pack` generates a reviewer-ready synthetic outreach bundle in `outputs/public/`.
 
+## Synthetic Research Workshop and Timed Study
+
+The prospective cohort rules are defined in the [Cohort Time Contract](docs/12_cohort_time_contract.md):
+index time, prediction window, outcome window, inclusion/exclusion logic, and
+the safeguards against post-outcome variables and mixed ICU stays.
+
+The [Trustworthy Clinical Research Platform blueprint](docs/11_trustworthy_research_platform_blueprint.md)
+documents the implemented synthetic research extension and its remaining roadmap.
+The flagship path uses an explicit first-ICU-stay cohort, a 24-hour prediction
+time, event and result-availability timing rules, prospective feature allowlists,
+aggregate quality gates, signed linear attributions, and checksum-verified
+aggregate packages.
+
+The isolated workshop flow creates 1,000 wholly invented patients, builds the
+warehouse, validates it, and compares simple models for hospital length of
+stay, in-hospital mortality, urgent 30-day readmission, and primary diagnosis
+class:
+
+```bash
+make research-demo
+```
+
+Run the versioned prospective ICU mortality demonstration after the workshop
+has seeded the isolated invented source:
+
+```bash
+make study-validate
+make study-preview
+make study-run
+make study-scenario
+make study-transferability
+```
+
+`make study-scenario` demonstrates delayed laboratory availability. The
+`duplicate_admission` scenario is intentionally blocked by source-key quality
+validation. To publish a completed run, use the run identifier printed by
+`make study-run`:
+
+```bash
+python -m src.cli study-package --config configs/research_synthetic.duckdb.yaml --run-id <completed-run>
+```
+
+Start the dashboard against this isolated source with:
+
+```bash
+MIMIC_CONFIG_PATH=configs/research_synthetic.duckdb.yaml make dashboard
+```
+
+The aggregate report is written to
+`outputs/public/research_synthetic/aggregate_results/research_demo_summary.md`.
+It also writes aggregate EDA CSVs and Plotly charts, with dedicated mortality
+and LOS notebooks in `notebooks/08_synthetic_mortality_classification.ipynb`
+and `notebooks/09_synthetic_los_regression.ipynb`.
+The companion beginner walkthrough is
+`notebooks/10_beginner_synthetic_ehr_workflow.ipynb`.
+Raw synthetic CSVs and the DuckDB file stay under ignored `data/` paths. This
+generator does not train on or copy MIMIC-IV records. The results demonstrate
+the workflow and cannot support clinical conclusions. See
+`docs/10_synthetic_research_workshop.md` for definitions, leakage controls,
+and a comparison with the learning repository that inspired this extension.
+
 ## LocalStack S3 Mode
 
 This is the cloud-style execution path used in this repository. It ingests MIMIC-style CSV objects from LocalStack S3 and runs the same Bronze/Silver/Gold pipeline.

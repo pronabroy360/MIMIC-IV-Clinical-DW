@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from src.api.routes_analytics import router as analytics_router
 from src.api.routes_cohorts import router as cohorts_router
 from src.api.routes_health import router as health_router
+from src.api.routes_studies import router as studies_router
 from src.core.config import WarehouseConfig, load_config
 from src.core.db import connect
 from src.llm.sql_guardrails import validate_aggregate_sql
@@ -51,4 +52,5 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(analytics_router)
 app.include_router(cohorts_router)
+app.include_router(studies_router)
 app.include_router(query_router)

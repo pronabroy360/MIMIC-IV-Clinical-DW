@@ -23,6 +23,7 @@ LAYER_FILE_ORDER = {
         "silver_patients.sql",
         "silver_admissions.sql",
         "silver_transfers.sql",
+        "silver_services.sql",
         "silver_icustays.sql",
         "silver_diagnoses.sql",
         "silver_procedures.sql",

@@ -1,0 +1,77 @@
+# Seventy-three transparent, non-outcome inputs for the invented cohort.
+# Measurements are first-24-hour ICU summaries unless stated otherwise.
+numeric:
+  - {name: age_at_admission, source: "silver_admissions + silver_patients", availability: by prediction time}
+  - {name: heart_rate_min, source: "gold_first_24h_features: Heart Rate minimum", availability: first 24 ICU hours}
+  - {name: heart_rate_max, source: "gold_first_24h_features: Heart Rate maximum", availability: first 24 ICU hours}
+  - {name: heart_rate_mean, source: "gold_first_24h_features: Heart Rate mean", availability: first 24 ICU hours}
+  - {name: sbp_min, source: "gold_first_24h_features: systolic BP minimum", availability: first 24 ICU hours}
+  - {name: sbp_max, source: "gold_first_24h_features: systolic BP maximum", availability: first 24 ICU hours}
+  - {name: sbp_mean, source: "gold_first_24h_features: systolic BP mean", availability: first 24 ICU hours}
+  - {name: dbp_min, source: "gold_first_24h_features: diastolic BP minimum", availability: first 24 ICU hours}
+  - {name: dbp_max, source: "gold_first_24h_features: diastolic BP maximum", availability: first 24 ICU hours}
+  - {name: dbp_mean, source: "gold_first_24h_features: diastolic BP mean", availability: first 24 ICU hours}
+  - {name: mbp_min, source: "gold_first_24h_features: mean BP minimum", availability: first 24 ICU hours}
+  - {name: mbp_max, source: "gold_first_24h_features: mean BP maximum", availability: first 24 ICU hours}
+  - {name: mbp_mean, source: "gold_first_24h_features: mean BP mean", availability: first 24 ICU hours}
+  - {name: resp_rate_min, source: "gold_first_24h_features: respiratory rate minimum", availability: first 24 ICU hours}
+  - {name: resp_rate_max, source: "gold_first_24h_features: respiratory rate maximum", availability: first 24 ICU hours}
+  - {name: resp_rate_mean, source: "gold_first_24h_features: respiratory rate mean", availability: first 24 ICU hours}
+  - {name: temperature_min, source: "gold_first_24h_features: temperature minimum", availability: first 24 ICU hours}
+  - {name: temperature_max, source: "gold_first_24h_features: temperature maximum", availability: first 24 ICU hours}
+  - {name: temperature_mean, source: "gold_first_24h_features: temperature mean", availability: first 24 ICU hours}
+  - {name: spo2_min, source: "gold_first_24h_features: oxygen saturation minimum", availability: first 24 ICU hours}
+  - {name: spo2_max, source: "gold_first_24h_features: oxygen saturation maximum", availability: first 24 ICU hours}
+  - {name: spo2_mean, source: "gold_first_24h_features: oxygen saturation mean", availability: first 24 ICU hours}
+  - {name: wbc_min, source: "gold_first_24h_features: WBC minimum", availability: first 24 ICU hours}
+  - {name: wbc_max, source: "gold_first_24h_features: WBC maximum", availability: first 24 ICU hours}
+  - {name: wbc_mean, source: "gold_first_24h_features: WBC mean", availability: first 24 ICU hours}
+  - {name: hemoglobin_min, source: "gold_first_24h_features: hemoglobin minimum", availability: first 24 ICU hours}
+  - {name: hemoglobin_max, source: "gold_first_24h_features: hemoglobin maximum", availability: first 24 ICU hours}
+  - {name: hemoglobin_mean, source: "gold_first_24h_features: hemoglobin mean", availability: first 24 ICU hours}
+  - {name: platelet_min, source: "gold_first_24h_features: platelets minimum", availability: first 24 ICU hours}
+  - {name: platelet_max, source: "gold_first_24h_features: platelets maximum", availability: first 24 ICU hours}
+  - {name: platelet_mean, source: "gold_first_24h_features: platelets mean", availability: first 24 ICU hours}
+  - {name: creatinine_min, source: "gold_first_24h_features: creatinine minimum", availability: first 24 ICU hours}
+  - {name: creatinine_max, source: "gold_first_24h_features: creatinine maximum", availability: first 24 ICU hours}
+  - {name: creatinine_mean, source: "gold_first_24h_features: creatinine mean", availability: first 24 ICU hours}
+  - {name: bun_min, source: "gold_first_24h_features: BUN minimum", availability: first 24 ICU hours}
+  - {name: bun_max, source: "gold_first_24h_features: BUN maximum", availability: first 24 ICU hours}
+  - {name: bun_mean, source: "gold_first_24h_features: BUN mean", availability: first 24 ICU hours}
+  - {name: sodium_min, source: "gold_first_24h_features: sodium minimum", availability: first 24 ICU hours}
+  - {name: sodium_max, source: "gold_first_24h_features: sodium maximum", availability: first 24 ICU hours}
+  - {name: sodium_mean, source: "gold_first_24h_features: sodium mean", availability: first 24 ICU hours}
+  - {name: potassium_min, source: "gold_first_24h_features: potassium minimum", availability: first 24 ICU hours}
+  - {name: potassium_max, source: "gold_first_24h_features: potassium maximum", availability: first 24 ICU hours}
+  - {name: potassium_mean, source: "gold_first_24h_features: potassium mean", availability: first 24 ICU hours}
+  - {name: glucose_min, source: "gold_first_24h_features: glucose minimum", availability: first 24 ICU hours}
+  - {name: glucose_max, source: "gold_first_24h_features: glucose maximum", availability: first 24 ICU hours}
+  - {name: glucose_mean, source: "gold_first_24h_features: glucose mean", availability: first 24 ICU hours}
+  - {name: lactate_min, source: "gold_first_24h_features: lactate minimum", availability: first 24 ICU hours}
+  - {name: lactate_max, source: "gold_first_24h_features: lactate maximum", availability: first 24 ICU hours}
+  - {name: lactate_mean, source: "gold_first_24h_features: lactate mean", availability: first 24 ICU hours}
+  - {name: chart_event_count_24h, source: "gold_first_24h_features: chart count", availability: first 24 ICU hours}
+  - {name: lab_event_count_24h, source: "gold_first_24h_features: lab count", availability: first 24 ICU hours}
+  - {name: input_event_count_24h, source: "gold_first_24h_features: input count", availability: first 24 ICU hours}
+  - {name: output_event_count_24h, source: "gold_first_24h_features: output count", availability: first 24 ICU hours}
+  - {name: procedure_event_count_24h, source: "gold_first_24h_features: procedure count", availability: first 24 ICU hours}
+  - {name: total_lab_events_icu, source: "gold_lab_features: ICU total", availability: first 24 ICU hours}
+  - {name: abnormal_lab_rate, source: "gold_lab_features: abnormal rate", availability: first 24 ICU hours}
+  - {name: lactate_measured_during_icu, source: "gold_lab_features: lactate flag", availability: first 24 ICU hours}
+  - {name: creatinine_measured_during_icu, source: "gold_lab_features: creatinine flag", availability: first 24 ICU hours}
+  - {name: has_heart_rate_24h, source: "gold_vital_features: HR flag", availability: first 24 ICU hours}
+  - {name: has_blood_pressure_24h, source: "gold_vital_features: BP flag", availability: first 24 ICU hours}
+  - {name: has_resp_rate_24h, source: "gold_vital_features: RR flag", availability: first 24 ICU hours}
+  - {name: has_temperature_24h, source: "gold_vital_features: temperature flag", availability: first 24 ICU hours}
+  - {name: diabetes_flag, source: "silver_diagnoses: E119", availability: admission coding proxy}
+  - {name: heart_failure_flag, source: "silver_diagnoses: I509", availability: admission coding proxy}
+  - {name: respiratory_failure_flag, source: "silver_diagnoses: J960", availability: admission coding proxy}
+  - {name: sepsis_proxy_flag, source: "silver_diagnoses: A419", availability: admission coding proxy}
+  - {name: comorbidity_count, source: "transparent diagnosis-flag count", availability: admission coding proxy}
+  - {name: vasopressor_first_24h_flag, source: "silver_input_events: Norepinephrine", availability: first 24 ICU hours}
+  - {name: ventilation_procedure_flag, source: "silver_procedures: ventilation", availability: admission procedure proxy}
+categorical:
+  - {name: gender, source: "silver_patients.gender", availability: by prediction time}
+  - {name: admission_type, source: "silver_admissions.admission_type", availability: by prediction time}
+  - {name: first_careunit, source: "silver_icustays.first_careunit", availability: by prediction time}
+  - {name: initial_service, source: "silver_services.curr_service", availability: by prediction time}

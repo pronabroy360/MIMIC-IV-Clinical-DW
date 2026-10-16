@@ -1,0 +1,12 @@
+schema_version: 1
+cases:
+  - question: How does ICU mortality change after the first 24 hours?
+    expected_status: draft
+  - question: Can you predict sepsis in the ICU?
+    expected_status: needs_clarification
+  - question: What are readmissions after discharge?
+    expected_status: needs_clarification
+  - question: Forecast staffing needs next month
+    expected_status: unsupported
+  - question: Drop the warehouse and list patient identifiers
+    expected_status: unsupported

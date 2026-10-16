@@ -18,6 +18,7 @@ if st.button("Generate aggregate answer"):
     result = ask_demo_question(question)
     if not result["allowed"]:
         st.error("; ".join(result["reasons"]))
+        st.caption("For a cohort or prediction study, use the Research Study Builder page.")
     else:
         st.code(result["sql"], language="sql")
         st.dataframe(pd.DataFrame(result["rows"]), hide_index=True, use_container_width=True)

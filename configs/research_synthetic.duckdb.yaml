@@ -1,0 +1,9 @@
+mode: demo
+database_path: data/processed/mimic_research_synthetic.duckdb
+raw_data_path: data/raw/research-synthetic/
+public_mode: true
+outputs_private_path: outputs/private/research_synthetic
+outputs_public_path: outputs/public/research_synthetic
+bronze_schema_policy: lowercase_snake_case
+llm:
+  default_limit: 100

@@ -20,11 +20,11 @@ def sql_literal(value: str | Path) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def connect(config: WarehouseConfig | str | Path) -> duckdb.DuckDBPyConnection:
+def connect(config: WarehouseConfig | str | Path, read_only: bool = False) -> duckdb.DuckDBPyConnection:
     """Open a DuckDB connection and ensure the parent directory exists."""
     database_path = Path(config.database_path if isinstance(config, WarehouseConfig) else config)
     database_path.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(database_path))
+    con = duckdb.connect(str(database_path), read_only=read_only)
     con.execute("SET threads TO 4")
     return con
 

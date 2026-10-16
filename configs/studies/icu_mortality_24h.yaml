@@ -1,0 +1,35 @@
+schema_version: 1
+study_id: synthetic_icu_mortality_24h_v1
+question: How do first-24-hour measurement availability and data quality affect a synthetic ICU mortality study?
+dataset:
+  required_origin: synthetic_invented
+cohort:
+  grain: icu_stay
+  minimum_age: 18
+  first_stay: first_icu_per_patient
+  care_unit:
+  require_alive_at_prediction: true
+  require_in_icu_at_prediction: true
+prediction:
+  anchor: icu_intime
+  horizon_hours: 24
+  event_window: half_open
+  require_available_by_prediction: true
+  unknown_availability: exclude
+task:
+  name: death_after_prediction_before_hospital_discharge
+  version: 1
+features:
+  registry_version: 3
+  set: prospective_icu_24h_v1
+evaluation:
+  split_unit: patient
+  seed: 42
+  proportions: [0.70, 0.15, 0.15]
+  cv:
+    folds: 3
+    repeats: 2
+    purpose: development_stability
+publication:
+  aggregate_only: true
+  minimum_cell_count: 10

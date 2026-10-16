@@ -1,0 +1,15 @@
+schema_version: 1
+scenarios:
+  delayed_labs:
+    description: Move selected invented lab availability times beyond the 24-hour prediction cutoff.
+    mutation: delay_lab_storetime
+    every_nth_lab: 5
+  duplicate_admission:
+    description: Duplicate one invented admission key to demonstrate a blocking key-quality gate.
+    mutation: duplicate_admission_key
+  missing_icu_anchor:
+    description: Remove selected ICU admission anchors and expose cohort attrition.
+    mutation: remove_icu_intime
+  impossible_spo2:
+    description: Insert an impossible invented oxygen saturation and trigger a blocking range gate.
+    mutation: impossible_spo2

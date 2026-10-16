@@ -11,7 +11,7 @@ This file is written for:
 - professor/reviewer walkthroughs,
 - future contributors implementing milestones.
 
-As of: `2026-05-27`
+As of: `2026-10-17`
 
 Project completion status for declared scope: `Complete` (Demo + Full Local + LocalStack paths).
 
@@ -33,7 +33,7 @@ Latest validation status from `outputs/private/validation_report.md`:
 
 Latest test status:
 
-- `pytest` suite: `11 passed`
+- `pytest` suite: `23 passed`
 
 ## Agent Map
 
@@ -363,3 +363,43 @@ This current phase is considered complete when all are true:
 2. Dashboard and API run with aggregate-only outputs.
 3. Validation report remains zero-fail on synthetic flow.
 4. Repo remains public-safe with no restricted data leakage.
+
+## Synthetic Research Workshop Extension (2026-10-17)
+
+`make research-demo` now creates an isolated 1,000-patient invented cohort,
+builds the standard warehouse, validates it, and writes an aggregate report
+comparing models for LOS, mortality, urgent 30-day readmission, and primary
+diagnosis class. It adds explicit prediction times, predictor provenance,
+missingness, leakage exclusions, patient-level split isolation, calibration,
+permutation importance, and synthetic subgroup checks. Versioned research
+feature definitions, plausibility ranges, and leakage rules are in
+`configs/research/`; aggregate EDA artifacts and dedicated mortality/LOS
+notebooks are generated with the workshop. The generator reads no MIMIC-IV
+records. Details are in `docs/10_synthetic_research_workshop.md`.
+
+The pre-existing demo, full-local, and LocalStack modes remain the declared
+warehouse scope. This extension is an educational simulation, not a validation
+of clinical findings on real patients.
+
+## Trustworthy Synthetic Research Platform (2026-10-17)
+
+Implementation specification:
+[Trustworthy Clinical Research Platform blueprint](docs/11_trustworthy_research_platform_blueprint.md).
+
+Status: implemented for one registered, invented-data ICU mortality study.
+
+The shared study service is used by `study-validate`, `study-preview`,
+`study-run`, `study-package`, the `/studies` API routes, and dashboard page 7.
+It limits inputs to a first-ICU-stay cohort, 24-hour prospective event and
+availability timing, task-specific feature allowlists, patient-level evaluation,
+signed linear attribution summaries, and aggregate-only publication packages.
+Dashboard page 8 runs isolated delayed-availability and duplicate-key quality
+scenarios. `study-transferability` creates two invented sites and reports an
+unchanged site-A model on site B.
+
+The Cohorts page supports a restricted age and care-unit builder and displays
+the time contract. Feature timing, assistant evaluation, missing-anchor and
+impossible-value scenarios, test-set bootstrap intervals, and separate site-B
+recalibration are implemented. The remaining roadmap is documented in the
+blueprint. This synthetic extension does not establish clinical validity or
+real MIMIC-IV findings.

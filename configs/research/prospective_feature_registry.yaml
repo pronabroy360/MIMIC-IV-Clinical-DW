@@ -1,0 +1,32 @@
+version: 3
+feature_set: prospective_icu_24h_v1
+task: death_after_prediction_before_hospital_discharge
+timing_policy:
+  anchor: icu_intime
+  horizon_hours: 24
+  event_window: "[anchor, prediction_time)"
+  availability: storetime must be present, no earlier than measurement, and no later than prediction_time
+features:
+  - {name: heart_rate_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: sbp_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: dbp_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: resp_rate_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: temperature_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: spo2_mean, source_table: silver_chart_events, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: wbc_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: hemoglobin_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: platelet_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: creatinine_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: bun_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: sodium_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: potassium_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: glucose_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: lactate_mean, source_table: silver_labs, event_time: charttime, available_time: storetime, unit: synthetic_unit}
+  - {name: vasopressor_first_24h_flag, source_table: silver_input_events, event_time: starttime, available_time: storetime, unit: flag}
+excluded_families:
+  - diagnosis_codes
+  - procedure_codes
+  - discharge_outcomes
+  - whole_stay_summaries
+  - identifiers
+  - future_events

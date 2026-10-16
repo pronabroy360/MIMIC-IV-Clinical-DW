@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from pathlib import Path
 
 from src.core.config import WarehouseConfig, load_config
-from src.core.db import connect
+from src.core.db import connect, execute_sql_file, row_count
 from src.core.logging import configure_logging
+from src.core.paths import project_root
 from src.ingest.check_localstack import check_localstack_sources
 from src.ingest.load_bigquery_metadata import load_bigquery_metadata
 from src.ingest.load_demo import load_local_files
@@ -21,6 +24,13 @@ from src.ml.train_baseline import train_logistic_baseline, write_baseline_output
 from src.reporting.generate_data_dictionary import generate_data_dictionary
 from src.reporting.generate_pipeline_report import generate_pipeline_report
 from src.reporting.generate_professor_summary import generate_professor_summary
+from src.research.evaluate import run_research_evaluation
+from src.research.evaluate_assistant import evaluate_assistant
+from src.research.seed import POPULATED_BRONZE_TABLES, seed_research_cohort
+from src.research.publication import verify_study_package
+from src.research.scenarios import available_scenarios, prepare_scenario
+from src.research.sites import evaluate_site_transferability, prepare_simulated_site
+from src.research.study_service import load_and_validate, preview_study, publish_run, run_study
 from src.transform.build_bronze import build_bronze
 from src.transform.build_gold import build_gold
 from src.transform.build_silver import build_silver
@@ -28,9 +38,9 @@ from src.transform.run_sql_layer import profile_tables
 from src.validation.validate_date_ranges import validate_date_ranges
 from src.validation.validate_keys import validate_keys
 from src.validation.validate_row_counts import validate_row_counts
+from src.validation.validate_research_quality import validate_invented_physiology_ranges, validate_source_key_uniqueness
 from src.validation.validate_schema import validate_schema
 from src.validation.validation_report import ValidationResult, write_validation_report
-
 
 DEMO_QUESTIONS = [
     "How many patients are in the dataset?",
@@ -79,6 +89,8 @@ def run_validation(config: WarehouseConfig) -> tuple[list[ValidationResult], Pat
         results.extend(validate_keys(con))
         results.extend(validate_date_ranges(con))
         results.extend(validate_row_counts(con))
+        results.extend(validate_source_key_uniqueness(con))
+        results.extend(validate_invented_physiology_ranges(con))
     report_path = write_validation_report(results, config.outputs_private_path)
     return results, report_path
 
@@ -205,6 +217,188 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_research_demo(args: argparse.Namespace) -> int:
+    """Build and evaluate a wholly invented, isolated teaching cohort."""
+    config = _load_config_arg(args)
+    seed_research_cohort(config, patients=args.patients, seed=args.seed)
+    ingest(config)
+    with connect(config) as con:
+        bronze_tables = [
+            row[0] for row in con.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = 'main' AND table_name LIKE 'bronze_%'"
+            ).fetchall()
+        ]
+        unexpected = [
+            table for table in bronze_tables
+            if table not in POPULATED_BRONZE_TABLES and row_count(con, table) > 0
+        ]
+    if unexpected:
+        raise ValueError(
+            "Research demo database contains non-synthetic Bronze rows: "
+            + ", ".join(sorted(unexpected))
+        )
+    build_gold(config)
+    with connect(config) as con:
+        execute_sql_file(con, project_root() / "sql/research/gold_research_index_admissions.sql")
+    results, validation_report = run_validation(config)
+    failures = [result for result in results if result.status == "fail"]
+    if failures:
+        print(f"Research demo validation failed: {validation_report}", file=sys.stderr)
+        return 1
+    summary = run_research_evaluation(config)
+    print(f"Synthetic research summary: {summary}")
+    print(f"Validation report: {validation_report}")
+    return 0
+
+
+def _load_study_arg(args: argparse.Namespace):
+    return load_and_validate(args.study)
+
+
+def cmd_study_validate(args: argparse.Namespace) -> int:
+    spec = _load_study_arg(args)
+    print(f"Study validated: {spec.study_id}")
+    print(f"Definition hash: {spec.definition_hash}")
+    return 0
+
+
+def cmd_study_preview(args: argparse.Namespace) -> int:
+    result = preview_study(_load_config_arg(args), _load_study_arg(args))
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
+def cmd_study_run(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    build_gold(config)
+    result = run_study(config, _load_study_arg(args))
+    print(f"Study succeeded: {result['run_id']}")
+    print(json.dumps(result["evaluation"], indent=2, default=str))
+    return 0
+
+
+def cmd_study_package(args: argparse.Namespace) -> int:
+    package = publish_run(_load_config_arg(args), args.run_id)
+    print(f"Published aggregate package: {package}")
+    print(json.dumps(verify_study_package(package), indent=2))
+    return 0
+
+
+def cmd_study_scenario(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    scenario_config = prepare_scenario(config, args.scenario)
+    ingest(scenario_config)
+    build_gold(scenario_config)
+    results, report = run_validation(scenario_config)
+    failures = [result for result in results if result.status == "fail"]
+    print(f"Scenario validation report: {report}")
+    if failures:
+        print(f"Scenario blocked by {len(failures)} quality failure(s).")
+        return 1
+    result = run_study(scenario_config, _load_study_arg(args))
+    print(f"Scenario study succeeded: {result['run_id']}")
+    return 0
+
+
+def cmd_study_transferability(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    spec = _load_study_arg(args)
+    site_a = prepare_simulated_site(config, "site_a", seed=41)
+    site_b = prepare_simulated_site(config, "site_b", seed=43)
+    result = evaluate_site_transferability(site_a, site_b, spec)
+    output = config.outputs_public_path / "studies" / "simulated_site_transferability.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    print(f"Transferability report: {output}")
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_study_assistant_eval(args: argparse.Namespace) -> int:
+    config = _load_config_arg(args)
+    corpus = project_root() / "configs/research/assistant_evaluation.yaml"
+    output = config.outputs_public_path / "studies" / "assistant_evaluation.json"
+    summary = evaluate_assistant(corpus, output)
+    print(f"Assistant evaluation: {output}")
+    print(json.dumps(summary, indent=2))
+    return 1 if summary["failed"] else 0
+
+
+def _run_codeindex_cli(*cli_args: str) -> int:
+    """
+    Run vendored `codeindex` CLI via `python -m codeindex.cli`.
+
+    The repo vendors the dependency under `vendor/codeindex`.
+    """
+    root = project_root()
+    codeindex_vendor_root = root / "vendor" / "codeindex"
+    if not codeindex_vendor_root.exists():
+        print(
+            "Missing vendored dependency: vendor/codeindex. Clone it via:\n"
+            "  gh repo clone scheidydude/codeindex\n",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Ensure `import codeindex` works from vendored source.
+    # Use subprocess via stdlib to avoid adding dependencies.
+    import subprocess
+
+    env = dict(**os.environ)
+    env["PYTHONPATH"] = str(codeindex_vendor_root)
+
+    cmd = [sys.executable, "-m", "codeindex.cli", *cli_args]
+    proc = subprocess.run(cmd, cwd=str(root), env=env)
+    return int(proc.returncode)
+
+
+def cmd_build_code_index(args: argparse.Namespace) -> int:
+    root = project_root()
+
+    # Our earlier custom CLI used --index-path as an index.json target.
+    # Keep that meaning: if supplied, treat it as `<root>/codeindex.json` output.
+    # The symbol index goes to the same directory as `symbolindex.json`.
+    codeindex_out: Path = (
+        Path(args.index_path) if getattr(args, "index_path", None) else (root / "outputs/private/code_index/codeindex.json")
+    )
+    codeindex_out.parent.mkdir(parents=True, exist_ok=True)
+    symbol_out = codeindex_out.parent / "symbolindex.json"
+
+    rc = _run_codeindex_cli(
+        "analyze",
+        str(root),
+        "--output",
+        str(codeindex_out),
+    )
+    if rc != 0:
+        return rc
+
+    rc = _run_codeindex_cli(
+        "symbols",
+        str(root),
+        "--output",
+        str(symbol_out),
+    )
+    if rc != 0:
+        return rc
+
+    print(f"codeindex.json written to: {codeindex_out}")
+    print(f"symbolindex.json written to: {symbol_out}")
+    return 0
+
+
+def cmd_mcp_codeindex(args: argparse.Namespace) -> int:
+    """
+    Start `codeindex serve --mcp` which provides MCP tools over stdio JSON-RPC.
+    """
+    root = project_root()
+    # codeindex's `--mcp` tool does not take an explicit index path argument;
+    # it auto-loads `codeindex.json`/`symbolindex.json` from the repo.
+    # If you want to use a different output directory, extend with flags later.
+    return _run_codeindex_cli("serve", "--mcp", "--repo", str(root))
+
+
 def cmd_ml_baseline(args: argparse.Namespace) -> int:
     config = _load_config_arg(args)
     build_gold(config)
@@ -261,10 +455,24 @@ def build_parser() -> argparse.ArgumentParser:
         "ml-baseline": cmd_ml_baseline,
         "demo-pack": cmd_demo_pack,
         "report": cmd_report,
+        "research-demo": cmd_research_demo,
+        "study-validate": cmd_study_validate,
+        "study-preview": cmd_study_preview,
+        "study-run": cmd_study_run,
+        "study-package": cmd_study_package,
+        "study-scenario": cmd_study_scenario,
+        "study-transferability": cmd_study_transferability,
+        "study-assistant-eval": cmd_study_assistant_eval,
+        "build-code-index": cmd_build_code_index,
+        "mcp-codeindex": cmd_mcp_codeindex,
     }
     for name, handler in commands.items():
         subparser = subparsers.add_parser(name)
-        subparser.add_argument("--config", default="configs/demo.duckdb.yaml")
+        default_config = (
+            "configs/research_synthetic.duckdb.yaml"
+            if name == "research-demo" else "configs/demo.duckdb.yaml"
+        )
+        subparser.add_argument("--config", default=default_config)
         subparser.set_defaults(handler=handler)
         if name == "seed-synthetic":
             subparser.add_argument(
@@ -274,6 +482,21 @@ def build_parser() -> argparse.ArgumentParser:
             )
         if name == "profile":
             subparser.add_argument("--prefix", default=None)
+        if name == "research-demo":
+            subparser.add_argument("--patients", type=int, default=1000)
+            subparser.add_argument("--seed", type=int, default=42)
+        if name in {"study-validate", "study-preview", "study-run", "study-scenario", "study-transferability"}:
+            subparser.add_argument("--study", default="configs/studies/icu_mortality_24h.yaml")
+        if name == "study-package":
+            subparser.add_argument("--run-id", required=True)
+        if name == "study-scenario":
+            subparser.add_argument("--scenario", choices=sorted(available_scenarios()), required=True)
+        if name in {"build-code-index", "mcp-codeindex"}:
+            subparser.add_argument(
+                "--index-path",
+                default=None,
+                help="Optional path to index.json (build-code-index writes it; mcp-codeindex reads it).",
+            )
     return parser
 
 

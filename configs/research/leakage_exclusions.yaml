@@ -1,0 +1,19 @@
+prediction_window_hours: 24
+outcomes:
+  - hospital_los_days
+  - in_hospital_mortality_flag
+  - urgent_readmitted_30d
+  - primary_disease_class
+forbidden_predictors:
+  - subject_id
+  - hadm_id
+  - stay_id
+  - index_admittime
+  - index_dischtime
+  - prediction_time
+  - hospital_los_days
+  - in_hospital_mortality_flag
+  - urgent_readmitted_30d
+  - primary_disease_class
+readmission_definition: later urgent admission within 30 days after index discharge; null for index deaths
+split_definition: fixed patient-level 70/15/15 train/validation/test split

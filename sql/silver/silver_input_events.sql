@@ -7,6 +7,7 @@ SELECT
     coalesce(cast(d.label AS VARCHAR), cast(i.itemid AS VARCHAR)) AS input_label,
     try_cast(i.starttime AS TIMESTAMP) AS starttime,
     try_cast(i.endtime AS TIMESTAMP) AS endtime,
+    try_cast(i.storetime AS TIMESTAMP) AS storetime,
     try_cast(i.amount AS DOUBLE) AS amount,
     cast(i.amountuom AS VARCHAR) AS amountuom,
     try_cast(i.rate AS DOUBLE) AS rate,
