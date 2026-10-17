@@ -393,9 +393,11 @@ The shared study service is used by `study-validate`, `study-preview`,
 It limits inputs to a first-ICU-stay cohort, 24-hour prospective event and
 availability timing, task-specific feature allowlists, patient-level evaluation,
 signed linear attribution summaries, and aggregate-only publication packages.
-Dashboard page 8 runs isolated delayed-availability and duplicate-key quality
-scenarios. `study-transferability` creates two invented sites and reports an
-unchanged site-A model on site B.
+Dashboard page 8 runs isolated delayed-availability, missing-anchor,
+duplicate-key, and impossible-value quality scenarios. Its paired comparison
+uses a frozen baseline model and reports common-patient metrics and attrition.
+`study-transferability` creates two invented sites and reports an unchanged
+site-A model on site B.
 
 The Cohorts page supports a restricted age and care-unit builder and displays
 the time contract. Feature timing, assistant evaluation, missing-anchor and

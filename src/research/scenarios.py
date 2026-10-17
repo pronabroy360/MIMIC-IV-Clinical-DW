@@ -30,6 +30,11 @@ def prepare_scenario(config: WarehouseConfig, scenario_name: str) -> WarehouseCo
     root = (config.outputs_private_path / "studies" / "scenarios" / scenario_name).resolve()
     if source == root:
         raise ValueError("Invalid synthetic scenario source")
+    for candidate in config.raw_data_path.rglob("*"):
+        if candidate.is_symlink():
+            resolved = candidate.resolve()
+            if resolved != source and source not in resolved.parents:
+                raise ValueError("Synthetic scenario source contains a symlink outside its data root")
     target_raw = root / "raw" / "research-synthetic"
     if target_raw.exists():
         shutil.rmtree(target_raw)

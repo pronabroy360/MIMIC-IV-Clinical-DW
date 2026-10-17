@@ -2,7 +2,7 @@ SYSTEM_PYTHON ?= python3
 VENV ?= .venv
 PYTHON ?= $(VENV)/bin/python
 
-.PHONY: setup seed-synthetic research-demo study-validate study-preview study-run study-scenario study-transferability study-assistant-eval localstack-check ingest-demo ingest-localstack run-localstack build-bronze build-silver build-gold validate profile run-all dashboard api test llm-demo llm-eval ml-baseline demo-pack report precommit-install precommit-run ci
+.PHONY: setup seed-synthetic research-demo study-validate study-preview study-run study-scenario study-compare study-transferability study-assistant-eval build-code-index mcp-codeindex smoke-codeindex-mcp localstack-check ingest-demo ingest-localstack run-localstack build-bronze build-silver build-gold validate profile run-all dashboard api test llm-demo llm-eval ml-baseline demo-pack report precommit-install precommit-run ci
 
 setup:
 	$(SYSTEM_PYTHON) -m venv $(VENV)
@@ -27,11 +27,23 @@ study-run:
 study-scenario:
 	$(PYTHON) -m src.cli study-scenario --config configs/research_synthetic.duckdb.yaml --scenario delayed_labs
 
+study-compare:
+	$(PYTHON) -m src.cli study-compare --config configs/research_synthetic.duckdb.yaml --scenario delayed_labs
+
 study-transferability:
 	$(PYTHON) -m src.cli study-transferability --config configs/research_synthetic.duckdb.yaml
 
 study-assistant-eval:
 	$(PYTHON) -m src.cli study-assistant-eval --config configs/research_synthetic.duckdb.yaml
+
+build-code-index:
+	$(PYTHON) -m src.cli build-code-index
+
+mcp-codeindex:
+	$(PYTHON) -m src.cli mcp-codeindex
+
+smoke-codeindex-mcp:
+	$(PYTHON) scripts/smoke_codeindex_mcp.py
 
 localstack-check:
 	$(PYTHON) -m src.cli localstack-check --config configs/localstack.s3.yaml.example

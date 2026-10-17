@@ -217,12 +217,15 @@ make study-validate
 make study-preview
 make study-run
 make study-scenario
+make study-compare
 make study-transferability
 ```
 
 `make study-scenario` demonstrates delayed laboratory availability. The
 `duplicate_admission` scenario is intentionally blocked by source-key quality
-validation. To publish a completed run, use the run identifier printed by
+validation. `make study-compare` evaluates delayed availability with one frozen
+baseline model, paired common test patients, separate attrition counts, and
+bootstrap intervals for metric differences. To publish a completed run, use the run identifier printed by
 `make study-run`:
 
 ```bash
@@ -325,6 +328,53 @@ icustays -> chart/input/output/procedure events
 ## LLM Query Assistant
 
 The optional query assistant is schema-grounded and aggregate-only. It rejects destructive SQL, `SELECT *`, Bronze table access, raw identifier projection, and non-aggregate patient-level queries. Generated SQL logs are written only to `outputs/private/`.
+
+## Code Index and MCP
+
+The repository vendors a clean copy of the Apache-2.0 licensed `codeindex`
+implementation in `vendor/codeindex_src`. Generate the dependency/blast-radius
+index and symbol map:
+
+```bash
+make build-code-index
+```
+
+Generated `codeindex.json` and `symbolindex.json` files are ignored by Git. To
+start the stdio MCP server for a compatible MCP client:
+
+```bash
+make mcp-codeindex
+```
+
+To exercise the server and its core tools through JSON-RPC stdio:
+
+```bash
+make smoke-codeindex-mcp
+```
+
+The server exposes six tools: `analyze_repo`, `get_impact`,
+`get_dependencies`, `get_high_blast_files`, `build_symbol_index`, and
+`lookup_symbol`. Use `lookup_symbol` to locate a function or class,
+`get_dependencies` to inspect imports, and `get_impact` to review likely
+downstream effects before editing a file.
+
+For Claude Code, add a project-local `.mcp.json` with the absolute repository
+and Python paths:
+
+```json
+{
+  "mcpServers": {
+    "mimic-codeindex": {
+      "command": "/absolute/path/to/MIMIC-IV Clinical DW/.venv/bin/python",
+      "args": ["-m", "src.cli", "mcp-codeindex"],
+      "env": {"PYTHONPATH": "/absolute/path/to/MIMIC-IV Clinical DW"}
+    }
+  }
+}
+```
+
+The older `src.codeindex` and `src.mcp` prototypes are deprecated. The CLI
+uses the vendored implementation.
 
 ## Compliance
 

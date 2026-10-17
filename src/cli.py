@@ -26,6 +26,7 @@ from src.reporting.generate_pipeline_report import generate_pipeline_report
 from src.reporting.generate_professor_summary import generate_professor_summary
 from src.research.evaluate import run_research_evaluation
 from src.research.evaluate_assistant import evaluate_assistant
+from src.research.comparison import compare_frozen_scenario
 from src.research.seed import POPULATED_BRONZE_TABLES, seed_research_cohort
 from src.research.publication import verify_study_package
 from src.research.scenarios import available_scenarios, prepare_scenario
@@ -301,6 +302,26 @@ def cmd_study_scenario(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_study_compare(args: argparse.Namespace) -> int:
+    baseline_config = _load_config_arg(args)
+    spec = _load_study_arg(args)
+    ingest(baseline_config)
+    build_gold(baseline_config)
+    scenario_config = prepare_scenario(baseline_config, args.scenario)
+    ingest(scenario_config)
+    build_gold(scenario_config)
+    quality, report = run_validation(scenario_config)
+    failures = [result for result in quality if result.status == "fail"]
+    if failures:
+        print(f"Scenario blocked by {len(failures)} quality failure(s): {report}")
+        return 1
+    output = baseline_config.outputs_public_path / "studies" / f"scenario_comparison_{args.scenario}.json"
+    result = compare_frozen_scenario(baseline_config, scenario_config, spec, output)
+    print(f"Frozen-model scenario comparison: {output}")
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0 if result["baseline_unchanged"] else 1
+
+
 def cmd_study_transferability(args: argparse.Namespace) -> int:
     config = _load_config_arg(args)
     spec = _load_study_arg(args)
@@ -325,18 +346,17 @@ def cmd_study_assistant_eval(args: argparse.Namespace) -> int:
     return 1 if summary["failed"] else 0
 
 
-def _run_codeindex_cli(*cli_args: str) -> int:
+def _run_codeindex_cli(*cli_args: str, cwd: Path | None = None) -> int:
     """
     Run vendored `codeindex` CLI via `python -m codeindex.cli`.
 
-    The repo vendors the dependency under `vendor/codeindex`.
+    The repo vendors a clean copy under `vendor/codeindex_src`.
     """
     root = project_root()
-    codeindex_vendor_root = root / "vendor" / "codeindex"
+    codeindex_vendor_root = root / "vendor" / "codeindex_src"
     if not codeindex_vendor_root.exists():
         print(
-            "Missing vendored dependency: vendor/codeindex. Clone it via:\n"
-            "  gh repo clone scheidydude/codeindex\n",
+            "Missing vendored dependency: vendor/codeindex_src. Restore it from the vendored source checkout.\n",
             file=sys.stderr,
         )
         return 1
@@ -349,7 +369,7 @@ def _run_codeindex_cli(*cli_args: str) -> int:
     env["PYTHONPATH"] = str(codeindex_vendor_root)
 
     cmd = [sys.executable, "-m", "codeindex.cli", *cli_args]
-    proc = subprocess.run(cmd, cwd=str(root), env=env)
+    proc = subprocess.run(cmd, cwd=str(cwd or root), env=env)
     return int(proc.returncode)
 
 
@@ -360,7 +380,7 @@ def cmd_build_code_index(args: argparse.Namespace) -> int:
     # Keep that meaning: if supplied, treat it as `<root>/codeindex.json` output.
     # The symbol index goes to the same directory as `symbolindex.json`.
     codeindex_out: Path = (
-        Path(args.index_path) if getattr(args, "index_path", None) else (root / "outputs/private/code_index/codeindex.json")
+        Path(args.index_path).resolve() if getattr(args, "index_path", None) else (root / "codeindex.json")
     )
     codeindex_out.parent.mkdir(parents=True, exist_ok=True)
     symbol_out = codeindex_out.parent / "symbolindex.json"
@@ -393,10 +413,9 @@ def cmd_mcp_codeindex(args: argparse.Namespace) -> int:
     Start `codeindex serve --mcp` which provides MCP tools over stdio JSON-RPC.
     """
     root = project_root()
-    # codeindex's `--mcp` tool does not take an explicit index path argument;
-    # it auto-loads `codeindex.json`/`symbolindex.json` from the repo.
-    # If you want to use a different output directory, extend with flags later.
-    return _run_codeindex_cli("serve", "--mcp", "--repo", str(root))
+    # MCP discovers both indexes upward from its current working directory.
+    index_path = Path(args.index_path).resolve() if args.index_path else root / "codeindex.json"
+    return _run_codeindex_cli("serve", "--mcp", "--repo", str(root), cwd=index_path.parent)
 
 
 def cmd_ml_baseline(args: argparse.Namespace) -> int:
@@ -461,6 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
         "study-run": cmd_study_run,
         "study-package": cmd_study_package,
         "study-scenario": cmd_study_scenario,
+        "study-compare": cmd_study_compare,
         "study-transferability": cmd_study_transferability,
         "study-assistant-eval": cmd_study_assistant_eval,
         "build-code-index": cmd_build_code_index,
@@ -485,11 +505,11 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "research-demo":
             subparser.add_argument("--patients", type=int, default=1000)
             subparser.add_argument("--seed", type=int, default=42)
-        if name in {"study-validate", "study-preview", "study-run", "study-scenario", "study-transferability"}:
+        if name in {"study-validate", "study-preview", "study-run", "study-scenario", "study-compare", "study-transferability"}:
             subparser.add_argument("--study", default="configs/studies/icu_mortality_24h.yaml")
         if name == "study-package":
             subparser.add_argument("--run-id", required=True)
-        if name == "study-scenario":
+        if name in {"study-scenario", "study-compare"}:
             subparser.add_argument("--scenario", choices=sorted(available_scenarios()), required=True)
         if name in {"build-code-index", "mcp-codeindex"}:
             subparser.add_argument(

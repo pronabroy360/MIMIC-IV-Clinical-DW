@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codeindex"
+version = "0.2.0"
+description = "Repo dependency analyzer with blast-radius impact scoring for AI-assisted development"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+
+[project.scripts]
+codeindex = "codeindex.cli:main"
+
+[project.optional-dependencies]
+watch = ["watchdog"]
+yaml  = ["PyYAML"]
+toml  = ["tomli ; python_version < '3.11'"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["codeindex*"]
+
+[tool.setuptools.package-data]
+"codeindex" = ["py.typed"]

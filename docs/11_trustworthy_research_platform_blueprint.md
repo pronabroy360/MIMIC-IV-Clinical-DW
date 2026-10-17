@@ -336,7 +336,7 @@ CSV is currently globally ignored by `.gitignore`; generated tables must be repr
 | Surface | Proposed change | Shared service |
 | --- | --- | --- |
 | New `7_Research_Study.py` | Fixed validated study definition, aggregate preview, execution, and package publication | `study_service` |
-| New `8_Data_Quality_Lab.py` | Synthetic scenario selection and gate evidence | `scenarios`, validation services |
+| New `8_Data_Quality_Lab.py` | Synthetic scenario selection, quality gate evidence, and paired frozen-model comparison | `scenarios`, validation, `comparison` |
 | Existing Query Assistant | Explicit unsupported response for unmatched aggregate questions | query guardrails |
 | `POST /studies/assistant/draft` | Typed draft, clarification, or unsupported response; no execution | assistant adapter |
 | `POST /studies/*` | Validation, preview, run, and aggregate package publication for registered study names | `study_service` |
@@ -348,6 +348,7 @@ make study-validate
 make study-preview
 make study-run
 make study-scenario                 # delayed availability scenario
+make study-compare                  # frozen model; paired common test patients
 make study-transferability          # invented site A to site B evaluation
 python -m src.cli study-package --config configs/research_synthetic.duckdb.yaml --run-id <completed-run>
 ```
@@ -415,6 +416,7 @@ Prepare a backup package and screenshots from a verified run. The live demonstra
 - [x] A restricted builder varies minimum age and care unit while retaining the reviewed first-stay, task, and timing rules.
 - [x] Timing audit reports event/availability categories and boundary behavior is tested.
 - [x] Isolated delayed-availability, missing-anchor, duplicate-key, and impossible-value scenarios run; blocking failures stop execution.
+- [x] A valid scenario can be compared on common held-out patients with a model frozen on baseline training data, separate attrition counts, baseline-integrity hashes, and paired bootstrap metric intervals.
 - [x] The assistant returns `draft`, `needs_clarification`, or `unsupported` without executing a study, and its reviewed corpus runs in CI.
 - [x] The simulated-site experiment trains only on invented site A, evaluates unchanged preprocessing on invented site B, then separately recalibrates on a held-out site-B partition.
 - [x] Attribution exports retain signed coefficients and verify linear additivity.
@@ -424,6 +426,6 @@ Prepare a backup package and screenshots from a verified run. The live demonstra
 
 ### Deliberately deferred scope
 
-The implementation does not yet offer unrestricted cohort construction, job orchestration, paired frozen-model scenario comparison, phenotype libraries, or deployment controls for restricted data. Those are next iterations, and this document leaves their acceptance criteria intact as a roadmap rather than representing them as shipped functionality.
+The implementation does not yet offer unrestricted cohort construction, job orchestration, phenotype libraries, or deployment controls for restricted data. Those are next iterations, and this document leaves their acceptance criteria intact as a roadmap rather than representing them as shipped functionality.
 
 Real-MIMIC distribution learning, real-patient holdout privacy similarity, and claims of real-hospital predictive validity remain outside the synthetic demonstration. They require separately authorized data and a suitable study protocol.
