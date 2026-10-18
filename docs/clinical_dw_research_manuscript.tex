@@ -1,152 +1,132 @@
-% Compile with: tectonic -o docs docs/clinical_dw_research_manuscript.tex
-% This manuscript describes repository state inspected on 18 October 2026.
+% Build: tectonic -o docs docs/clinical_dw_research_manuscript.tex
+% Repository and cited sources reviewed 18 October 2026.
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=0.88in]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{microtype}
-\usepackage{booktabs}
-\usepackage{amsmath}
-\usepackage{array}
-\usepackage{longtable}
-\usepackage{enumitem}
-\usepackage{hyperref}
+\usepackage{lmodern,microtype,booktabs,amsmath,array,hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
-\setlist{nosep}
-\title{An Auditable Clinical Data Warehouse and Prospective Study Workbench for MIMIC-IV-Shaped Data}
-\author{Pronab Chandra Roy\thanks{Project repository: \url{https://github.com/pronabroy360/MIMIC-IV-Clinical-DW}.}}
-\date{Technical research manuscript --- 18 October 2026}
+\title{An Auditable Clinical Data Warehouse for Time-Bounded ICU Research}
+\author{Pronab Chandra Roy\thanks{Repository: \url{https://github.com/pronabroy360/MIMIC-IV-Clinical-DW}.}}
+\date{Technical manuscript --- 18 October 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Clinical prediction studies can fail before a model is fitted: source tables may be incomplete, the cohort can be defined at the wrong grain, measurements may become available after the intended prediction time, and a polished performance summary can conceal these choices. This manuscript describes a local, open-source clinical data warehouse and a narrowly scoped research workbench designed to make those choices inspectable. The system loads MIMIC-IV-shaped files into Bronze, Silver, and Gold layers in DuckDB; offers aggregate analytics through a command-line interface, FastAPI, and Streamlit; and implements a synthetic first-ICU-stay mortality experiment with a versioned time contract. A deterministic invented-data generator permits end-to-end execution without access to the credentialed MIMIC-IV database. The prospective study excludes events outside the first 24 hours or unavailable by the prediction time, separates a patient-level train/validation/test partition, and exports an allowlisted aggregate package. A sample synthetic run has 560 training, 120 validation, and 120 test rows; its test area under the precision--recall curve is 0.109. That figure describes recovery of invented patterns, not clinical accuracy. The central contribution is an executable pathway from source provenance to cohort selection, feature timing, evaluation, and reviewable evidence. The manuscript also identifies remaining threats to validity, including incomplete data fingerprints, a narrow task registry, simulated rather than independent hospital sites, and the absence of any credentialed-data validation.
+This paper describes a MIMIC-IV-shaped clinical warehouse and a constrained prospective study workbench. Its contribution is an executable chain from source provenance to cohort construction, measurement availability, model evaluation, and aggregate publication. DuckDB Bronze, Silver, and Gold layers support local analytics; a versioned study contract defines first-ever ICU stay, prediction at 24 hours, and death after prediction before hospital discharge. A synthetic generator enables end-to-end execution without credentialed MIMIC-IV records. In one identified synthetic run, 560/120/120 patients entered training/validation/test partitions, with test average precision 0.109 and AUROC 0.535. These values test software behavior, not clinical validity. We specify the temporal predicates, preprocessing and split protocol, controlled quality perturbations, and current provenance and disclosure-control gaps. The resulting platform is a basis for research on temporal validity and transportability once approved real-data access and stronger reproducibility controls are available.
 \end{abstract}
 
-\noindent\textbf{Keywords:} clinical data warehouse; electronic health records; MIMIC-IV; temporal leakage; synthetic data; reproducible research; data quality.
+\noindent\textbf{Keywords:} MIMIC-IV; EHR; clinical data warehouse; temporal leakage; prediction; synthetic data.
 
-\section{Research motivation and scope}
+\section{Motivation and research boundary}
 
-Electronic health records (EHRs) are attractive for retrospective and predictive research, but their structure reflects care delivery and operational recording rather than a ready-made study design. MIMIC-IV is a well-described EHR resource containing hospital and intensive-care data \cite{mimicpaper,mimicv31}. Access to the full release requires PhysioNet credentialing, training, and a data use agreement \cite{mimicv31}. These access conditions have a direct methodological consequence for this project: no result reported here is a result on the credentialed MIMIC-IV patient population. The repository's tiny synthetic demonstration and its larger invented research generator are engineering fixtures. The separately available MIMIC-IV Clinical Database Demo is useful for learning the source layout, but it is not the full cohort \cite{mimicdemo}.
+MIMIC-IV combines hospital and ICU records useful for secondary research \cite{mimicpaper}. Full v3.1 files require credentialing, training, and a data-use agreement \cite{mimicv31}; the open clinical demo is a separate, small resource \cite{mimicdemo}. This repository contains neither an authorized full-data extract nor a model trained on one. Its local results use invented records. That boundary matters because an internally consistent synthetic score cannot estimate discrimination, calibration, fairness, or utility in patients.
 
-The project's research question is therefore deliberately about \emph{research infrastructure}: can a local warehouse make the route from source tables to a time-bounded ICU prediction study explicit, reproducible, and inspectable, and can controlled synthetic faults show where that route breaks? The implemented flagship experiment asks how first-24-hour measurement availability and data quality affect a synthetic ICU mortality study. This differs from claiming that the resulting classifier is a clinically useful mortality model. A reviewer should be able to locate the study definition, explain why each patient is included, identify the exact event and availability windows for each predictor, and inspect the evaluation and release boundary.
+The research question is infrastructural: \emph{can a study's source coverage, index stay, prediction time, eligible observations, split, and published evidence be reconstructed from executable artifacts?} This focus follows two known risks. EHR measurements reflect care processes as well as physiology \cite{agniel2018}; and prediction studies need clear reporting of participants, predictors, outcome, analysis, and limitations \cite{tripodai,probast}. We therefore treat the cohort and time contract as first-class study objects rather than relying on a final model score.
 
-The contribution has three parts. First, a layered warehouse normalizes source-shaped records and supports aggregate clinical analytics. Second, a fixed prospective study contract ties cohort grain, prediction time, permitted features, outcome, and split unit to executable code. Third, synthetic scenarios and aggregate artifacts make data-quality and distribution-shift questions discussable without exporting patient-level records. These parts share one local configuration and service layer across command-line, API, and dashboard entry points. The implementation is a research prototype, not a deployed clinical decision-support system.
+\section{Warehouse architecture}
 
-\section{System architecture and data provenance}
+The system accepts source-shaped CSV/CSV.GZ files through local ingestion, a small invented demo seed, an isolated 1,000-patient research generator, or a configured LocalStack S3 path. BigQuery support is metadata-only. The 1,000-patient generator writes ignored source files and a separate DuckDB database. Neither its distributions nor its privacy properties were learned from restricted MIMIC-IV data.
 
-\subsection{Execution modes and layered warehouse}
+Bronze tables retain source-like fields plus \texttt{source\_file}, \texttt{loaded\_at}, \texttt{source\_module}, and \texttt{pipeline\_run\_id}. Silver standardizes patient, admission, stay, laboratory, chart, and intervention entities, including event and storage timestamps. Gold builds descriptive patient, admission, ICU, laboratory, and first-24-hour marts. Missing optional inputs create empty placeholders to keep the pipeline executable; source coverage must therefore be inspected before interpreting an empty mart as a true zero. A distinct research feature table prevents whole-stay descriptive summaries from entering a 24-hour prediction task.
 
-The repository supports a small invented demo seed, an isolated 1,000-patient invented research generator, ingestion of locally available source files, and a LocalStack S3 path. The locally available full-file path is useful only to a credentialed operator who independently supplies permitted files; it is not evidence that those files exist in this repository. The BigQuery component is a metadata scaffold rather than a remote clinical-data execution path. The research generator writes source-shaped CSV files to an ignored raw-data directory and builds an isolated DuckDB warehouse, avoiding accidental mixing with the standard six-patient demo.
-
-Bronze tables preserve source-like rows and add ingestion metadata including source file, load time, module, and pipeline run identifier. Missing optional inputs produce empty placeholders, which lets SQL build but must not be interpreted as observed zero clinical events. Silver tables standardize patient, admission, ICU-stay, laboratory, chart, and intervention entities and retain the timestamps needed downstream. Gold contains descriptive marts such as patient, admission, ICU-stay, and first-24-hour summaries. Research feature construction is a separate path: descriptive Gold summaries may describe the whole stay, whereas the prospective table must obey its own cutoff. SQL and Python modules implement the transformations; the \texttt{run-all} command orchestrates ingestion, Gold construction, validation, and reporting.
+The Makefile and CLI orchestrate ingestion, transformation, validation, and reporting. FastAPI and Streamlit expose aggregate analytics and call a shared study service. The rule-based query assistant supports predefined aggregate prompts; SQL guardrails reject destructive statements, Bronze access, raw identifiers, and nonaggregate projections. These checks are application controls, not a formal privacy proof or production authorization system.
 
 \begin{table}[ht]
-\centering
-\small
-\begin{tabular}{p{0.17\linewidth}p{0.37\linewidth}p{0.36\linewidth}}
+\centering\small
+\begin{tabular}{p{0.16\linewidth}p{0.39\linewidth}p{0.37\linewidth}}
 \toprule
-Stage & Principal responsibility & Review evidence \\
+Layer & Stored object & Inspection point \\
 \midrule
-Source/Bronze & Discover and ingest MIMIC-shaped files; record provenance & Source coverage and ingestion report \\
-Silver & Type, join, and normalize clinical entities and event times & Core keys, timestamps, and joins \\
-Gold & Build descriptive aggregate marts & Row counts and aggregate dashboard/API views \\
-Research & Compile cohort; enforce feature timing; fit a fixed task model & Study definition, cohort flow, timing and feature audits \\
-Publication & Copy only named aggregate artifacts & Manifest, quality summary, SHA-256 checksums \\
+Bronze & Source-shaped rows and ingest metadata & File coverage and provenance \\
+Silver & Typed entities, keys, event times, storage times & Join, uniqueness, and date checks \\
+Gold & Descriptive marts & Aggregate counts and dashboards \\
+Study & Eligible stays, timed features, model output & Cohort flow, feature/timing audits \\
+Release & Allowlisted aggregate package & Manifest and SHA-256 checksums \\
 \bottomrule
 \end{tabular}
-\caption{The local evidence chain. Empty placeholders preserve buildability, but coverage still needs explicit inspection.}
+\caption{Evidence chain implemented by the local warehouse and study service.}
 \label{tab:chain}
 \end{table}
 
-Configuration files select database and output paths; the Makefile exposes the operator workflow. The dashboard presents aggregate views of overview, admissions, ICU, laboratories and vitals, cohorts, and the research workbench. FastAPI exposes health, analytics, cohort, and study routes. Their shared research service validates definitions and runs the same cohort and feature code. A rule-based natural-language query assistant supports predefined aggregate questions. SQL guardrails reject destructive statements, unbounded raw-row patterns such as \texttt{SELECT *}, Bronze access, raw identifier projection, and nonaggregate queries. These are useful application boundaries, although they do not constitute a formal privacy guarantee or replace access control on a real deployment.
+\section{Prospective ICU study contract}
 
-\subsection{Two distinct synthetic workflows}
+\subsection{Index population and estimand}
 
-The earlier teaching workshop generates 1,000 invented patients and source-like admissions, diagnoses, procedures, services, labs, charts, and inputs. Its index unit is the first hospital admission per patient. It studies hospital length of stay, in-hospital death, urgent readmission within 30 days, and a compact synthetic diagnosis class. The readmission label is null for an index death and requires a later urgent admission strictly after discharge and within 30 days. The workshop includes a 73-candidate feature catalog, descriptive plots, baseline models, a fixed patient-level split, and repeated cross-validation. Some workshop predictors have retrospective or incomplete prospective availability; the compact diagnosis class is a teaching target, not a validated phenotype. Consequently this path should be read as a tutorial and regression fixture, not as the prospective task described next.
-
-The flagship workbench instead defines one adult patient's \emph{first-ever} ICU stay as the candidate index. The supported task is death strictly after a 24-hour prediction point and no later than hospital discharge. It has a narrower allowlist of 19 numeric and three categorical predictor fields. The separation is deliberate: a shared warehouse can serve retrospective description and prospective modeling, but a descriptive field is not automatically eligible at a prospective decision time.
-
-\section{Executable study design}
-
-\subsection{Cohort, prediction time, and outcome}
-
-The versioned YAML study specification fixes the study identifier, synthetic origin, first-stay rule, adult threshold, 24-hour horizon, half-open event window, availability policy, task version, feature registry version, random seed, split proportions, and publication cell threshold. Unsupported task or feature-set values are rejected by typed contract validation. Let $t_0$ denote ICU entry of the patient's first-ever ICU stay and let $t_p=t_0+24\,\mathrm{h}$. The first stay is chosen by ICU entry time and then stay identifier \emph{before} age, care-unit, and eligibility filters. A later qualifying stay therefore cannot replace an ineligible first stay.
-
-An eligible row has known $t_0$, age at admission at least 18 years, and ICU departure strictly after $t_p$; death at or before $t_p$ is excluded. The optional care-unit restriction is applied after first-stay selection. Positive outcome is death at $t_d$ satisfying $t_p<t_d\leq t_{\mathrm{hospital\ discharge}}$. The study table contains one eligible ICU stay per selected patient. Cohort preview produces ordered counts for all ICU stays, first stays, adult first stays, care-unit selection, and eligibility at prediction. This flow is a visible accounting mechanism: an apparently strong score cannot silently hide a large loss of eligible patients.
-
-The definition has an important estimand: mortality among adults who survive and remain in intensive care for 24 hours after their first ICU entry. It does not estimate mortality at ICU admission, mortality across all stays, or mortality for patients discharged earlier. The outcome also relies on the local hospital-discharge record. Without a separate follow-up source, an absence of a later death cannot be interpreted as long-term survival.
-
-\subsection{Event time and availability time}
-
-A prospective predictor requires more than an event occurring before the cutoff. For a chart or laboratory observation with event time $t_e$ and recorded availability time $t_a$, the implemented rule is
+The versioned YAML contract fixes synthetic origin, task and feature versions, seed 42, 70/15/15 patient split, and a 24-hour horizon. SQL chooses each patient's first-ever ICU stay by \texttt{intime}, breaking ties with \texttt{stay\_id}, \emph{before} applying adult, optional care-unit, and eligibility filters. Consequently, a later eligible stay cannot replace an excluded first stay. Let $t_0$ be first ICU entry and $t_p=t_0+24\,\mathrm{h}$. Eligibility requires age $\geq18$, known $t_0$, ICU departure $>t_p$, and no recorded death at or before $t_p$. The binary outcome is
 \begin{equation}
- t_0 \leq t_e < t_p,\qquad t_e\leq t_a\leq t_p,\qquad t_a\ \text{known}.
+Y=\mathbf{1}\{t_p<t_{\mathrm{death}}\leq t_{\mathrm{hospital\ discharge}}\}.
 \end{equation}
-The first interval is half-open, so a measurement made exactly at $t_p$ is excluded. A measurement drawn earlier but stored after $t_p$ is also excluded. Unknown availability is excluded by default. For input events the start time plays the event-time role. The \texttt{storetime} field is an operational proxy for availability in this implementation; proving that it matches clinician-visible availability would require source-specific validation on real data. Event filters join chart and input records by the selected \texttt{stay\_id}; hospital labs join via admission and are restricted to the selected stay's ICU window. This prevents later events from leaking into the first-stay row.
+Thus the target population comprises adults alive and still in ICU at 24 hours of their first stay. It excludes early deaths and early ICU departures and says nothing about death after discharge. The preview reports cumulative stay and patient counts from all ICU stays to eligible rows, making selection loss visible.
 
-The feature builder takes means of selected heart rate, blood pressure, respiratory rate, temperature, oxygen saturation, and laboratory measurements, plus 24-hour chart/lab event counts and a first-24-hour vasopressor indicator. Age, gender, admission type, and first care unit supply baseline context. The task registry excludes diagnosis and procedure codes, discharge outcomes, whole-stay summaries, identifiers, future events, and site identifiers from predictors. Diagnosis or procedure information lacking independently established availability is particularly dangerous: hospital discharge coding may describe an outcome after the decision point. The per-feature audit records observed rows, missing rate, distinct values, and an active/inactive variation status. In the current pipeline the model does not automatically drop every inactive feature; the audit makes the issue visible for review.
+\subsection{Event-time and availability-time predicates}
 
-\section{Evaluation, scenarios, and research outputs}
+For observation event time $t_e$ and storage time $t_s$, the research feature SQL enforces
+\begin{equation}
+ t_0\leq t_e<t_p,\qquad t_e\leq t_s\leq t_p,\qquad t_s\ne\mathrm{NULL}.
+\label{eq:timing}
+\end{equation}
+The half-open event interval excludes a measurement exactly at prediction. A result recorded after prediction is unavailable even if its specimen or chart time is earlier. MIMIC-IV documentation describes laboratory \texttt{charttime} as usually near specimen acquisition and \texttt{storetime} as result availability; ICU chart storage denotes entry or validation rather than necessarily the instant of bedside observation \cite{labevents,icuevents}. Accordingly, \texttt{storetime} is an operational availability proxy whose meaning must be checked by table and workflow before a real-data study.
 
-\subsection{Model and partition protocol}
+Chart and input events join the selected \texttt{stay\_id}; hospital labs join \texttt{hadm\_id} and must also fall inside the stay's ICU window. The builder aggregates six vital-sign families, nine laboratory families, event counts, and a first-24-hour vasopressor flag. Age and three categorical context fields complete a task registry of 19 numeric and three categorical predictors. Diagnosis/procedure codes, discharge fields, identifiers, site label, future events, and whole-stay summaries are excluded. A feature audit records coverage, missing rate, distinct values, and activity status. This is an audit, not automatic variable selection.
 
-The flagship service uses a fixed patient-level 70/15/15 split with seed 42. Because its cohort has one selected stay per patient, the patient split also separates cohort rows. Numerical inputs receive median imputation and standard scaling; categorical inputs receive most-frequent imputation and one-hot encoding. These preprocessing steps are fitted inside a scikit-learn pipeline on the training partition. The classifier is a class-weighted logistic regression. The validation partition is evaluated, and the test partition is reported separately. Six repeated stratified three-fold scores on the combined development partition are labeled a stability description; they are not an unbiased estimate following an extensive hyperparameter search. The current flagship has one logistic candidate, despite the artifact filename \texttt{model\_comparison.csv}; that file does not establish a broad model comparison.
+\section{Evaluation and controlled perturbations}
 
-Reported discrimination and calibration summaries are AUROC, area under the precision--recall curve (AUPRC), and Brier score. A 200-resample test-row bootstrap estimates 95\% percentile intervals when both outcome classes occur. With one selected stay per patient, a row resample is also a patient resample for this task. Undefined one-class cases are marked as not estimable. Coefficients and baseline-centered linear contributions are exported with an additivity check; these are logistic-model explanations on the model-output scale, not causal effects and not output from the external SHAP package.
+\subsection{Internal evaluation}
+
+The flagship task uses one selected stay per patient. Patient identifiers determine a seeded 70/15/15 train/validation/test assignment. A scikit-learn pipeline fits median imputation and standardization for numeric variables, most-frequent imputation and one-hot encoding for categorical variables, and class-weighted logistic regression on training data. Fitting preprocessing inside the pipeline prevents validation/test statistics from entering training. Validation average precision is reported; a separate locked test partition supplies final metrics. Repeated stratified three-fold cross-validation, twice on train plus validation, describes development stability rather than an independent post-selection estimate. The current flagship fits one logistic candidate; its artifact named \texttt{model\_comparison.csv} must not be read as evidence of a broad algorithm search.
+
+The output reports AUROC, average precision (AP), and Brier score. Precision--recall analysis is informative for imbalanced outcomes \cite{davis2006}; probability error is summarized as $n^{-1}\sum_{i=1}^{n}(p_i-y_i)^2$. A Brier score alone does not establish calibration; a future real-data protocol should add calibration intercept, slope, and plots \cite{vancalster2019}. Test uncertainty uses 200 patient-row bootstrap resamples and 2.5/97.5 percentiles when two classes are present. Signed, baseline-centered linear contributions are checked for additivity; they are model-scale explanations, not causal effects or SHAP output.
 
 \begin{table}[ht]
-\centering
-\small
+\centering\small
 \begin{tabular}{lr}
 \toprule
-Illustrative artifact: run \texttt{synthetic\_icu\_mortality\_24h\_v1-970d76be} & Recorded value \\
+Published synthetic run \texttt{...970d76be} & Value \\
 \midrule
-Training / validation / test rows & 560 / 120 / 120 \\
-Development repeated-CV mean AUPRC (standard deviation) & 0.120 (0.027) \\
-Validation AUPRC & 0.130 \\
-Test AUROC & 0.535 \\
-Test AUPRC & 0.109 \\
-Test Brier score & 0.241 \\
+Train / validation / test rows & 560 / 120 / 120 \\
+Development CV AP, mean (SD) & 0.120 (0.027) \\
+Validation AP & 0.130 \\
+Test AUROC / AP / Brier & 0.535 / 0.109 / 0.241 \\
 \bottomrule
 \end{tabular}
-\caption{One published aggregate synthetic run. Values are rounded from its \texttt{evaluation\_summary.json}; its manifest records code revision \texttt{e8fdf87}. These scores cannot support a clinical performance claim.}
-\label{tab:example}
+\caption{Rounded values from the identified aggregate run package; manifest revision \texttt{e8fdf87}. They quantify an invented-data exercise only.}
+\label{tab:run}
 \end{table}
 
-Table~\ref{tab:example} is an artifact example, not a pooled estimate or benchmark. Another published local run with the same reported definition hash has different test scores. The present manifest's database snapshot hash is derived from the \emph{list of Silver table names}, not from row contents. Its code revision records the Git commit but not a complete dirty-worktree patch or dependency lock. These facts limit the strength of any claim that two packages represent identical data and executable code. A future publication-grade run should use content-addressed input manifests, a committed or archived code state, pinned dependencies, and a persisted private split manifest, then explain any intentional stochasticity.
+Another published package with the same definition hash has different test scores. The present \texttt{dataset\_snapshot} hashes only Silver table \emph{names}, not row contents; the manifest records Git HEAD but no full uncommitted patch or locked environment. Therefore, those packages do not prove identical inputs or code. Content hashes, a persisted private split manifest, frozen dependencies, and complete code-state capture are required before claiming bitwise reproducibility.
 
-\subsection{Controlled data-quality experiments}
+\subsection{Quality and site experiments}
 
-The workbench includes isolated invented-data scenarios for delayed laboratory availability, duplicate admissions, missing ICU anchors, and impossible oxygen saturation. The intended analysis separates two effects: cohort attrition due to eligibility changes and prediction changes among the same retained patients. A paired comparison command evaluates delayed availability with a frozen baseline model and common held-out patients; scenario gates should block publication when duplicate keys or impossible physiology violate quality rules. These are controlled software challenges. A scenario result is not an estimate of how often an error occurs in a real hospital, and this manuscript makes no numerical claim about paired scenario effects because no current aggregate comparison artifact was inspected for it.
+Isolated invented scenarios delay laboratory storage time, duplicate admissions, remove ICU anchors, or introduce impossible oxygen saturation. The paired comparison fixes a baseline model and compares common held-out patients while reporting attrition separately; quality-failing scenarios are intended to block score publication. This distinguishes changing inputs from changing the cohort. A two-site exercise simulates delayed labs at site B and fits recalibration on a disjoint site-B partition. Because both sites originate from one generator, it demonstrates a workflow rather than geographic external validity. Genuine transportability needs independent institutions, code/unit mapping, and prespecified external validation \cite{riley2024}.
 
-A separate two-site synthetic exercise assigns invented site labels, delays some results at site B, measures available-lab coverage, and fits a separately labeled recalibration on a disjoint site-B calibration partition. It is a transferability demonstration, not an external validation study: both simulated sites arise from one generator and cannot represent independent care systems. A research-grade extension would require genuinely independent, approved sites, explicit mapping of local codes and units, site-specific missingness diagnostics, confidence intervals by site, and a prespecified external evaluation protocol.
+\section{Release controls, limits, and research programme}
 
-\subsection{Interfaces and public package boundary}
+The publisher copies an explicit allowlist of aggregate files: flow, timing and feature audits; model and evaluation summaries; signed attributions; manifest; quality summary; and README. It writes SHA-256 checksums. Patient-level predictions and split assignments stay outside that package. A minimum cell count exists in the YAML contract, but the copier does not enforce it on every field. Restricted-data release needs an artifact-level disclosure review. SQL guardrails and ignored raw paths reduce accidental exposure without establishing a comprehensive security guarantee.
 
-Study validation, preview, run, status, scenario, comparison, and synthetic site analysis are exposed through the command-line workflow; the dashboard provides cohort, timing, quality, and study views. A study-question assistant drafts only supported typed requests from a versioned corpus; it cannot execute arbitrary model code. Published packages use an explicit file allowlist: manifest, cohort and timing flow, feature audit, quality summary, model summary, evaluation summary, linear attributions, and README. SHA-256 checksums support detection of accidental artifact changes. Patient-level predictions and split assignments are not part of the public package. The study contract specifies a minimum cell threshold, but the current publication copier does not apply that threshold to every aggregate field. A release review must check small cells and other disclosure risks before use with restricted data.
+The earlier 1,000-patient teaching workshop remains distinct: its first-admission grain supports length of stay, in-hospital death, urgent 30-day readmission, and a synthetic diagnosis class with a 73-candidate catalog. Some fields have retrospective availability, and the diagnosis target is not a clinical phenotype. Neither workshop scores nor the prospective synthetic run demonstrate performance on MIMIC-IV. Empty placeholder tables, simple mean features, incomplete content fingerprinting, and no independent-site test further limit interpretation. TRIPOD+AI and PROBAST offer reporting and bias-assessment structures for a future clinical study, but this prototype does not claim compliance or low risk of bias \cite{tripodai,probast}.
 
-\section{Validation, limitations, and next research steps}
-
-The standard warehouse checks schemas, required fields, key uniqueness, joins, length-of-stay and date sanity, and expected foundational row volume. The research path adds contract, timing, grain, scenario, and publication checks in code and tests. The six-patient seed and 1,000-patient research generator make end-to-end runs repeatable without restricted files. A passing synthetic gate establishes that the implementation behaves as specified on those fixtures. It does not establish that MIMIC-IV columns are complete in all versions, that local timestamps capture real clinical availability, or that the task has clinical utility. Missing optional source files can be represented by empty tables, so operators must check source coverage before interpreting zero events.
-
-The most consequential limits are methodological. The invented generator is based on documented arbitrary rules, not distribution learning from MIMIC-IV or a privacy-preserving real-data synthesis. No real-data distributional similarity or holdout privacy comparison has been performed. The prototype's single ICU mortality task excludes many plausible research questions; its broad workshop tasks include retrospective teaching targets that should not be presented as prospective clinical prediction. The flagship classifier uses simple averages and counts, omitting richer trajectories, code harmonization, unit adjudication, and treatment timing. Observational associations would in any case require careful confounding and missing-data analysis before interpretation. The API and SQL guardrails have not been evaluated as a production security or disclosure-control system.
-
-There is a concrete staged path for PhD-level work. First, strengthen provenance: hash source content and transformation SQL, persist the split assignment privately, lock dependencies, record the full code state, and verify that two nominally identical studies yield identical cohort and feature fingerprints. Second, validate the time contract against source documentation and clinician workflows, including whether \texttt{storetime} truly precedes availability to the intended user. Third, acquire MIMIC-IV through the official credentialing route and execute the predeclared protocol entirely in an approved environment; perform data-quality profiling and inspect exclusion flow before any model comparison. Fourth, introduce a prespecified baseline suite, calibration assessment, subgroup uncertainty, and independent temporal or site validation. Fifth, evaluate synthetic perturbations against measured real-world missingness mechanisms while keeping restricted records and patient-level outputs under the governing data-use agreement. Each step is a proposed study, not an achievement claimed by the current synthetic demonstration.
+The next study should proceed in stages: (1) hash input contents, SQL, code, environment, and split assignments; (2) audit each field's clinical availability and missingness mechanism; (3) execute a prespecified cohort and analysis plan inside an approved MIMIC-IV environment; (4) report discrimination, calibration, uncertainty, and subgroup performance; and (5) test temporal and independent-site transportability before discussing clinical use. Those are research objectives, not results of the current repository.
 
 \section{Conclusion}
 
-The repository provides a functioning local chain from source-shaped clinical records through warehouse layers to an explicitly timed, aggregate-published research experiment. Its strongest present result is an inspectable \emph{method}: cohort selection, event and availability cutoffs, task-specific predictors, patient separation, quality evidence, and bounded publication can be reviewed together. The observed classifier scores are intentionally modest and scientifically nonclinical because all records in this run were invented. For a prospective supervisor discussion, the platform is best treated as a concrete foundation for research on data provenance, temporal validity, and multi-site transportability, with credentialed MIMIC-IV evaluation and stronger reproducibility controls as the next evidence-producing phase.
+The platform's present achievement is an inspectable, executable study pathway: source coverage, first-stay selection, two-clock feature eligibility, patient separation, aggregate evaluation, and bounded publication can be traced together. Synthetic scores establish that the software runs under an explicit contract. Clinical claims await credentialed data, verified availability semantics, stronger provenance, and independent validation.
 
 \section*{Reproducibility note}
 
-The study definition is \path{configs/studies/icu_mortality_24h.yaml}. Its implementation is in \path{src/research/}, with supporting transforms, SQL, API, and dashboard modules. The invented-data route runs \texttt{make research-demo}, then \texttt{make study-validate}, \texttt{make study-preview}, and \texttt{make study-run}. Table~\ref{tab:example} identifies its aggregate package by run ID. Reproducing that historical result requires the recorded earlier code state and data inputs. The current \texttt{make ci} target runs the local demo, synthetic research flow, flagship study, assistant evaluation, and tests.
+The study YAML is under \path{configs/studies/}; service code is in \path{src/research/}. Generate data with \texttt{make research-demo}. Then run \texttt{make study-validate}, \texttt{make study-preview}, and \texttt{make study-run}. Table~\ref{tab:run} refers to an earlier published package; the current Git head does not guarantee its scores.
 
-\begin{thebibliography}{9}
-\bibitem{mimicpaper} A. E. W. Johnson et al., ``MIMIC-IV, a freely accessible electronic health record dataset,'' \emph{Scientific Data}, vol. 10, article 1, 2023. doi: \href{https://doi.org/10.1038/s41597-022-01899-x}{10.1038/s41597-022-01899-x}.
-\bibitem{mimicv31} A. Johnson et al., ``MIMIC-IV,'' version 3.1, PhysioNet, 2024. doi: \href{https://doi.org/10.13026/kpb9-mt58}{10.13026/kpb9-mt58}. Accessed 18 October 2026.
-\bibitem{mimicdemo} PhysioNet, ``MIMIC-IV Clinical Database Demo,'' version 2.2. \url{https://physionet.org/content/mimic-iv-demo/2.2/}. Accessed 18 October 2026.
+\begin{thebibliography}{11}
+\bibitem{mimicpaper} Johnson AEW et al. MIMIC-IV, a freely accessible electronic health record dataset. \emph{Scientific Data}. 2023;10:1. \href{https://doi.org/10.1038/s41597-022-01899-x}{doi:10.1038/s41597-022-01899-x}.
+\bibitem{mimicv31} Johnson A et al. MIMIC-IV, version 3.1. PhysioNet; 2024. \href{https://doi.org/10.13026/kpb9-mt58}{doi:10.13026/kpb9-mt58}.
+\bibitem{mimicdemo} PhysioNet. MIMIC-IV Clinical Database Demo, version 2.2. \url{https://physionet.org/content/mimic-iv-demo/2.2/}.
+\bibitem{agniel2018} Agniel D, Kohane IS, Weber GM. Biases in electronic health record data due to processes within the healthcare system. \emph{BMJ}. 2018;361:k1479. \href{https://doi.org/10.1136/bmj.k1479}{doi:10.1136/bmj.k1479}.
+\bibitem{tripodai} Collins GS et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models. \emph{BMJ}. 2024;385:e078378. \href{https://doi.org/10.1136/bmj-2023-078378}{doi:10.1136/bmj-2023-078378}.
+\bibitem{probast} Wolff RF et al. PROBAST: a tool to assess the risk of bias and applicability of prediction model studies. \emph{Ann Intern Med}. 2019;170:51--58. \href{https://doi.org/10.7326/M18-1376}{doi:10.7326/M18-1376}.
+\bibitem{labevents} MIMIC documentation. \emph{The labevents table}. \url{https://mimic.mit.edu/docs/iv/modules/hosp/labevents.html}.
+\bibitem{icuevents} MIMIC documentation. \emph{The datetimeevents table}. \url{https://mimic.mit.edu/docs/iv/modules/icu/datetimesevents.html}.
+\bibitem{davis2006} Davis J, Goadrich M. The relationship between precision--recall and ROC curves. \emph{ICML}. 2006:233--240. \href{https://doi.org/10.1145/1143844.1143874}{doi:10.1145/1143844.1143874}.
+\bibitem{vancalster2019} Van Calster B et al. Calibration: the Achilles heel of predictive analytics. \emph{BMC Med}. 2019;17:230. \href{https://doi.org/10.1186/s12916-019-1466-7}{doi:10.1186/s12916-019-1466-7}.
+\bibitem{riley2024} Riley RD et al. Evaluation of clinical prediction models (part 2): how to undertake an external validation study. \emph{BMJ}. 2024;384:e074820. \href{https://doi.org/10.1136/bmj-2023-074820}{doi:10.1136/bmj-2023-074820}.
 \end{thebibliography}
-
 \end{document}
